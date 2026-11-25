@@ -1,11 +1,13 @@
-import { COOLDOWN_ITEM, DEFAULT_EXERCISES, WARMUP_ITEM } from '../data/exercises.js';
+import { COOLDOWN_ITEM, DEFAULT_EXERCISES, WARMUP_ITEM } from './defaults';
+import type { Exercise, TimelineStep, WorkoutSettings } from './schema';
+
+export const WARMUP_DURATION_SEC = 120;
+export const COOLDOWN_DURATION_SEC = 60;
 
 /**
- * Format seconds as MM:SS.
- * @param {number} sec
- * @returns {string}
+ * Format seconds as MM:SS, clamping negative values to 00:00.
  */
-export function formatMMSS(sec) {
+export function formatMMSS(sec: number): string {
   const safe = Math.max(0, Math.floor(sec));
   const m = Math.floor(safe / 60);
   const s = safe % 60;
@@ -14,29 +16,26 @@ export function formatMMSS(sec) {
 
 /**
  * Compute total duration of a circuit timeline in seconds.
- * @param {Array<{ duration: number }>} timeline
- * @returns {number}
  */
-export function computeTotalDuration(timeline) {
-  return timeline.reduce((acc, item) => acc + (item.duration || 0), 0);
+export function computeTotalDuration(timeline: readonly TimelineStep[]): number {
+  return timeline.reduce((acc, item) => acc + Math.max(0, item.duration || 0), 0);
 }
 
 /**
  * Build the ordered list of WARM-UP, WORK, REST, and COOL-DOWN steps.
  * Pure function with no global state or DOM dependencies.
- *
- * @param {Array} exercises
- * @param {object} settings
- * @returns {Array}
  */
-export function buildCircuitTimeline(exercises, settings) {
+export function buildCircuitTimeline(
+  exercises: readonly Exercise[],
+  settings: WorkoutSettings,
+): TimelineStep[] {
   const activeExercises = exercises.filter((ex) => ex.active);
-  const list = [];
+  const list: TimelineStep[] = [];
 
   if (settings.includeWarmup) {
     list.push({
       phase: 'WARM-UP',
-      duration: 120,
+      duration: WARMUP_DURATION_SEC,
       round: 0,
       totalRounds: settings.rounds,
       exercise: WARMUP_ITEM,
@@ -47,7 +46,7 @@ export function buildCircuitTimeline(exercises, settings) {
     activeExercises.forEach((ex, idx) => {
       list.push({
         phase: 'WORK',
-        duration: settings.workSec,
+        duration: ex.workSecOverride ?? settings.workSec,
         round: r,
         totalRounds: settings.rounds,
         exercise: ex,
@@ -56,22 +55,30 @@ export function buildCircuitTimeline(exercises, settings) {
       const isLastOfFinalRound = r === settings.rounds && idx === activeExercises.length - 1;
 
       if (!isLastOfFinalRound) {
-        const nextEx = idx + 1 < activeExercises.length ? activeExercises[idx + 1] : activeExercises[0];
+        const nextEx =
+          idx + 1 < activeExercises.length ? activeExercises[idx + 1]! : activeExercises[0]!;
+        const isWeighted = nextEx.equipment.kind !== 'bodyweight';
+
         list.push({
           phase: 'REST',
           duration: settings.restSec,
           round: r,
           totalRounds: settings.rounds,
           exercise: {
-            id: 'rest-phase',
+            id: `rest-before-${nextEx.id}-r${r}-${idx}`,
             name: `Rest & Prep: ${nextEx.name}`,
             muscleGroup: `Next: ${nextEx.muscleGroup}`,
-            equipment: nextEx.equipment || '2x 5kg Dumbbells',
+            equipment: nextEx.equipment,
             animationType: nextEx.animationType,
+            active: true,
             steps: [
-              'Set the 5kg dumbbells down safely and shake out your forearms and shoulders.',
-              `Preview the smooth animation on the left for ${nextEx.name}.`,
-              'Take 3 deep breaths and pick up your weights on the 3-2-1 countdown.',
+              isWeighted
+                ? 'Set your weights down safely and shake out your forearms and shoulders.'
+                : 'Shake out your arms and shoulders and catch your breath.',
+              `Preview the form guide for ${nextEx.name}.`,
+              isWeighted
+                ? 'Take 3 deep breaths and pick up your weights on the 3-2-1 countdown.'
+                : 'Take 3 deep breaths and get into position on the 3-2-1 countdown.',
             ],
             tip: nextEx.tip || 'Stay loose and keep your posture tall during rest.',
           },
@@ -83,7 +90,7 @@ export function buildCircuitTimeline(exercises, settings) {
   if (settings.includeCooldown) {
     list.push({
       phase: 'COOL-DOWN',
-      duration: 60,
+      duration: COOLDOWN_DURATION_SEC,
       round: settings.rounds,
       totalRounds: settings.rounds,
       exercise: COOLDOWN_ITEM,
@@ -91,12 +98,13 @@ export function buildCircuitTimeline(exercises, settings) {
   }
 
   if (list.length === 0) {
+    const fallbackEx = DEFAULT_EXERCISES[0]!;
     list.push({
       phase: 'WORK',
-      duration: 40,
+      duration: settings.workSec || 40,
       round: 1,
       totalRounds: 1,
-      exercise: DEFAULT_EXERCISES[0],
+      exercise: fallbackEx,
     });
   }
 

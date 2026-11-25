@@ -2,22 +2,33 @@
   "name": "home-fitness",
   "version": "1.0.0",
   "private": true,
-  "description": "5kg Dumbbell Circuit Studio — Persistent Workout Trainer with 60fps SVG Kinematics",
+  "description": "Dumbbell Circuit Studio — Offline-First Home Workout Trainer with 60 FPS SVG Kinematics",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "fmt": "oxfmt --write",
+    "fmt:check": "oxfmt --check",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "firebase": "^11.0.2"
+    "preact": "^11.2.0"
   },
   "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
     "@tailwindcss/vite": "^4.1.4",
+    "@testing-library/preact": "^3.2.6",
+    "happy-dom": "^21.0.4",
+    "oxfmt": "^0.80.0",
+    "oxlint": "^1.95.0",
     "tailwindcss": "^4.1.4",
+    "typescript": "^7.0.2",
     "vite": "^6.2.0",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^3.1.1"
   }
 }

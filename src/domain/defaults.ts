@@ -1,14 +1,25 @@
-/**
- * Default exercise catalog, warm-up, and cool-down definitions.
- * Pure data module with no DOM or storage side effects.
- */
+import {
+  DEFAULT_SETTINGS,
+  SCHEMA_VERSION,
+  type AppDataV3,
+  type Exercise,
+  type Routine,
+} from './schema';
 
-export const DEFAULT_EXERCISES = [
+export const DEFAULT_ROUTINE_ID = 'routine-dumbbell-upper';
+export const DEFAULT_ROUTINE_NAME = '5kg Dumbbell Upper Circuit';
+
+export const DEFAULT_EXERCISES: readonly Exercise[] = [
   {
     id: 'ex-overhead-press',
     name: 'Dumbbell Overhead Shoulder Press',
     muscleGroup: 'Shoulders (Deltoids) • Triceps',
-    equipment: '2x 5kg Dumbbells • Standing',
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
     animationType: 'overhead-press',
     active: true,
     steps: [
@@ -22,7 +33,12 @@ export const DEFAULT_EXERCISES = [
     id: 'ex-bent-row',
     name: 'Bent-Over Dumbbell Rows',
     muscleGroup: 'Upper & Mid-Back • Rear Delts',
-    equipment: '2x 5kg Dumbbells • Standing Hinge',
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing Hinge',
+    },
     animationType: 'bent-row',
     active: true,
     steps: [
@@ -36,7 +52,12 @@ export const DEFAULT_EXERCISES = [
     id: 'ex-floor-press',
     name: 'Dumbbell Floor Chest Press',
     muscleGroup: 'Chest (Pectorals) • Triceps',
-    equipment: '2x 5kg Dumbbells • Floor / Mat',
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Floor / Mat',
+    },
     animationType: 'floor-press',
     active: true,
     steps: [
@@ -50,7 +71,12 @@ export const DEFAULT_EXERCISES = [
     id: 'ex-bicep-curl',
     name: 'Standing Bicep Curls',
     muscleGroup: 'Biceps • Forearms',
-    equipment: '2x 5kg Dumbbells • Standing',
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
     animationType: 'bicep-curl',
     active: true,
     steps: [
@@ -62,26 +88,34 @@ export const DEFAULT_EXERCISES = [
   },
 ];
 
-export const WARMUP_ITEM = {
+export const WARMUP_ITEM: Exercise = {
   id: 'phase-warmup',
   name: 'Warm-Up: Arm Circles & Mobility',
   muscleGroup: 'Shoulders • Thoracic Spine • Elbows',
-  equipment: 'Bodyweight Mobility',
+  equipment: {
+    kind: 'bodyweight',
+    label: 'Bodyweight Mobility',
+  },
   animationType: 'lateral-raise',
+  active: true,
   steps: [
     'Perform 40 seconds of large, smooth forward and backward arm circles to warm up the shoulder capsules.',
     'Do 40 seconds of torso twists and scapular squeezes (pulling elbows back gently).',
-    'Finish with 40 seconds of light bodyweight overhead reaches to prepare for the 5kg dumbbells.',
+    'Finish with 40 seconds of light bodyweight overhead reaches to prepare for your weights.',
   ],
   tip: 'Move smoothly through your full pain-free range of motion.',
 };
 
-export const COOLDOWN_ITEM = {
+export const COOLDOWN_ITEM: Exercise = {
   id: 'phase-cooldown',
   name: 'Cool-Down: Upper Body Stretch',
   muscleGroup: 'Deltoids • Chest • Biceps',
-  equipment: 'Recovery Stretch',
+  equipment: {
+    kind: 'bodyweight',
+    label: 'Recovery Stretch',
+  },
   animationType: 'overhead-press',
+  active: true,
   steps: [
     'Cross-body shoulder stretch: Gently pull your right arm across your chest for 15s, then switch sides.',
     'Chest & bicep opener: Clasp your hands behind your back and lift your chest gently for 15 seconds.',
@@ -89,3 +123,27 @@ export const COOLDOWN_ITEM = {
   ],
   tip: 'Slow breathing signals your nervous system to shift into recovery.',
 };
+
+export function cloneDefaultExercises(): Exercise[] {
+  return structuredClone(DEFAULT_EXERCISES) as Exercise[];
+}
+
+export function createDefaultRoutine(nowIso = new Date().toISOString()): Routine {
+  return {
+    id: DEFAULT_ROUTINE_ID,
+    name: DEFAULT_ROUTINE_NAME,
+    exercises: cloneDefaultExercises(),
+    settings: { ...DEFAULT_SETTINGS },
+    updatedAt: nowIso,
+  };
+}
+
+export function createDefaultAppData(nowIso = new Date().toISOString()): AppDataV3 {
+  const routine = createDefaultRoutine(nowIso);
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    activeRoutineId: routine.id,
+    routines: [routine],
+    history: [],
+  };
+}
