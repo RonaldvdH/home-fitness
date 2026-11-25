@@ -25,3 +25,11 @@ pnpm fmt:check   # oxfmt formatting check
 pnpm test        # Vitest unit & Preact component tests
 pnpm build       # Production PWA build
 ```
+
+## Deploying & Installing on Android (GitHub Pages)
+
+This repository includes [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) to publish the PWA over free HTTPS via GitHub Pages (required on Android Chrome for PWA installation, Service Worker offline caching, and Screen Wake Lock).
+
+1. In your GitHub repository, open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**.
+2. Push or merge to `main` (or run **Deploy to GitHub Pages** manually from the **Actions** tab on any branch to preview changes on your phone before merging).
+3. Open `https://ronaldvdh.github.io/home-fitness/` in Chrome on Android and tap **Add to Home screen / Install app**.

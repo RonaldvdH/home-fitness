@@ -3,7 +3,16 @@ import { preact } from '@preact/preset-vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function resolveBasePath(rawBase: string | undefined): string {
+  if (!rawBase || rawBase === '/') return '/';
+  const withLeading = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
+  return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
+}
+
+const base = resolveBasePath(process.env.VITE_BASE_PATH);
+
 export default defineConfig({
+  base,
   plugins: [
     preact(),
     tailwindcss(),
@@ -19,7 +28,8 @@ export default defineConfig({
         background_color: '#020617',
         display: 'standalone',
         orientation: 'any',
-        start_url: '/',
+        scope: base,
+        start_url: base,
         icons: [
           {
             src: 'icon.svg',
