@@ -15,9 +15,23 @@ export const ANIMATION_IDS = [
   'tricep-extension',
   'squat',
   'rdl',
+  'reverse-lunge',
+  'glute-bridge',
+  'crunch',
+  'leg-raise',
+  'russian-twist',
+  'plank-tap',
 ] as const;
 
 export type AnimationId = (typeof ANIMATION_IDS)[number];
+
+export const WORKOUT_DURATIONS = [10, 15, 20] as const;
+export type WorkoutDurationMin = (typeof WORKOUT_DURATIONS)[number];
+
+export const MUSCLE_GROUP_TAGS = ['upper', 'lower', 'abs'] as const;
+export type MuscleGroupTag = (typeof MUSCLE_GROUP_TAGS)[number];
+
+export type TargetMuscleGroup = MuscleGroupTag | 'full';
 
 export type EquipmentKind = 'dumbbells' | 'bodyweight' | 'kettlebell' | 'bands';
 
@@ -32,6 +46,8 @@ export interface Exercise {
   id: string;
   name: string;
   muscleGroup: string;
+  muscleGroups: MuscleGroupTag[];
+  durations: WorkoutDurationMin[];
   equipment: EquipmentSpec;
   animationType: AnimationId;
   active: boolean;
@@ -213,6 +229,82 @@ export function normalizeEquipment(raw: unknown): EquipmentSpec {
   };
 }
 
+const MUSCLE_GROUP_TAG_SET: ReadonlySet<string> = new Set<string>(MUSCLE_GROUP_TAGS);
+const WORKOUT_DURATION_SET: ReadonlySet<number> = new Set<number>(WORKOUT_DURATIONS);
+
+export function inferMuscleGroupTags(
+  animationType: AnimationId,
+  muscleGroupLabel = '',
+): MuscleGroupTag[] {
+  const lower = muscleGroupLabel.toLowerCase();
+  const inferred = new Set<MuscleGroupTag>();
+
+  if (
+    animationType === 'squat' ||
+    animationType === 'rdl' ||
+    animationType === 'reverse-lunge' ||
+    animationType === 'glute-bridge' ||
+    /quad|glute|hamstring|leg|calf|lower/.test(lower)
+  ) {
+    inferred.add('lower');
+  }
+  if (
+    animationType === 'crunch' ||
+    animationType === 'leg-raise' ||
+    animationType === 'russian-twist' ||
+    animationType === 'plank-tap' ||
+    /abs|core|oblique/.test(lower)
+  ) {
+    inferred.add('abs');
+  }
+  if (
+    animationType === 'overhead-press' ||
+    animationType === 'bent-row' ||
+    animationType === 'floor-press' ||
+    animationType === 'bicep-curl' ||
+    animationType === 'lateral-raise' ||
+    animationType === 'front-raise' ||
+    animationType === 'tricep-extension' ||
+    /shoulder|delt|chest|pec|back|lat|bicep|tricep|arm|upper/.test(lower)
+  ) {
+    inferred.add('upper');
+  }
+
+  return inferred.size > 0 ? Array.from(inferred) : ['upper'];
+}
+
+export function normalizeMuscleGroupTags(
+  raw: unknown,
+  animationType: AnimationId,
+  muscleGroupLabel = '',
+): MuscleGroupTag[] {
+  if (Array.isArray(raw)) {
+    const valid = Array.from(
+      new Set(
+        raw.filter(
+          (item): item is MuscleGroupTag =>
+            typeof item === 'string' && MUSCLE_GROUP_TAG_SET.has(item),
+        ),
+      ),
+    );
+    if (valid.length > 0) return valid;
+  }
+  return inferMuscleGroupTags(animationType, muscleGroupLabel);
+}
+
+export function normalizeDurationTags(raw: unknown): WorkoutDurationMin[] {
+  if (Array.isArray(raw)) {
+    const selected = new Set(
+      raw
+        .map((item) => Number(item))
+        .filter((item): item is WorkoutDurationMin => WORKOUT_DURATION_SET.has(item)),
+    );
+    const valid = WORKOUT_DURATIONS.filter((d) => selected.has(d));
+    if (valid.length > 0) return valid;
+  }
+  return [...WORKOUT_DURATIONS];
+}
+
 export function normalizeExercise(raw: unknown, index = 0): Exercise | null {
   if (!isRecord(raw)) return null;
 
@@ -225,6 +317,8 @@ export function normalizeExercise(raw: unknown, index = 0): Exercise | null {
   const animationType: AnimationId = isAnimationId(raw.animationType)
     ? raw.animationType
     : 'overhead-press';
+  const muscleGroups = normalizeMuscleGroupTags(raw.muscleGroups, animationType, muscleGroup);
+  const durations = normalizeDurationTags(raw.durations);
   const active = typeof raw.active === 'boolean' ? raw.active : true;
 
   const rawSteps = Array.isArray(raw.steps)
@@ -252,6 +346,8 @@ export function normalizeExercise(raw: unknown, index = 0): Exercise | null {
     id,
     name,
     muscleGroup,
+    muscleGroups,
+    durations,
     equipment,
     animationType,
     active,

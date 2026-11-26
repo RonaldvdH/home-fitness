@@ -11,6 +11,7 @@ import { ToastHost } from './ToastHost';
 import { WorkoutStage } from './WorkoutStage';
 import { ExerciseModal } from './modals/ExerciseModal';
 import { HistoryModal } from './modals/HistoryModal';
+import { NewWorkoutModal } from './modals/NewWorkoutModal';
 import { SettingsModal } from './modals/SettingsModal';
 
 export interface AppProps {
@@ -27,12 +28,14 @@ export function App({ store: externalStore }: AppProps) {
   const store = useMemo(() => externalStore ?? createWorkoutStore(), [externalStore]);
   const [state, setState] = useState<WorkoutStoreState>(() => store.getState());
 
+  const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
-  const anyModalOpen = exerciseModalOpen || settingsModalOpen || historyModalOpen;
+  const anyModalOpen =
+    newWorkoutModalOpen || exerciseModalOpen || settingsModalOpen || historyModalOpen;
 
   useEffect(() => {
     setState(store.getState());
@@ -138,6 +141,7 @@ export function App({ store: externalStore }: AppProps) {
 
       <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         <WorkoutStage
+          routineName={state.activeRoutine.name}
           currentStep={currentStep}
           nextStep={nextStep}
           previewExercise={previewExercise}
@@ -145,6 +149,7 @@ export function App({ store: externalStore }: AppProps) {
           demoSpeed={state.activeRoutine.settings.demoSpeed}
           onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
           onClearPreview={() => store.clearPreview()}
+          onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
         />
 
         <RoutineSidebar
@@ -167,6 +172,14 @@ export function App({ store: externalStore }: AppProps) {
           onRestoreDefaults={() => store.restoreDefaultExercises()}
         />
       </main>
+
+      <NewWorkoutModal
+        open={newWorkoutModalOpen}
+        currentSettings={state.activeRoutine.settings}
+        userExercises={state.activeRoutine.exercises}
+        onClose={() => setNewWorkoutModalOpen(false)}
+        onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
+      />
 
       <ExerciseModal
         open={exerciseModalOpen}

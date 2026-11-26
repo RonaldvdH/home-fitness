@@ -160,8 +160,9 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
           leftElbowRef.current.setAttribute('cy', pose.leftArm.elbow.y.toFixed(1));
         }
         if (dumbbellLeftRef.current) {
-          dumbbellLeftRef.current.style.display = includeDumbbells ? 'inline' : 'none';
-          if (includeDumbbells) {
+          const showLeftDb = includeDumbbells && !pose.hideLeftDumbbell;
+          dumbbellLeftRef.current.style.display = showLeftDb ? 'inline' : 'none';
+          if (showLeftDb) {
             setDumbbellTransform(
               dumbbellLeftRef.current,
               pose.leftArm.hand.x,
@@ -254,7 +255,7 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
     if (cueRef.current) cueRef.current.textContent = frame.cue;
     if (dumbbellLeftRef.current) {
       dumbbellLeftRef.current.style.display =
-        showDumbbells && frame.pose.leftArm ? 'inline' : 'none';
+        showDumbbells && frame.pose.leftArm && !frame.pose.hideLeftDumbbell ? 'inline' : 'none';
     }
     if (dumbbellRightRef.current) {
       dumbbellRightRef.current.style.display = showDumbbells ? 'inline' : 'none';

@@ -32,6 +32,8 @@ export interface AthletePose {
   footRight: [Point2D, Point2D];
   leftArm: ArmPose | null;
   rightArm: ArmPose;
+  /** Hide the left dumbbell when both hands grip a single shared weight (e.g., Russian twists). */
+  hideLeftDumbbell?: boolean;
   motionGuidePath: string;
 }
 
@@ -460,6 +462,298 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
           dumbbellAngleDeg: 0,
         },
         motionGuidePath: 'M 158 172 Q 180 186 196 198',
+      };
+    },
+  },
+
+  'reverse-lunge': {
+    id: 'reverse-lunge',
+    label: 'Dumbbell Reverse Lunge',
+    view: 'side',
+    cues: ['Step Back & Lower', 'Knee Hover', 'Drive Through Front Heel', 'Stand Tall'],
+    computePose(p) {
+      const hipX = lerp(160, 152, p);
+      const hipY = lerp(158, 194, p);
+      const shX = lerp(160, 154, p);
+      const shY = lerp(92, 128, p);
+      const hdX = lerp(160, 156, p);
+      const hdY = lerp(62, 98, p);
+
+      return {
+        floorY: 248,
+        head: { x: hdX, y: hdY },
+        torsoHip: { x: hipX, y: hipY },
+        torsoShoulder: { x: shX, y: shY },
+        clavicleStart: { x: shX - 4, y: shY },
+        clavicleEnd: { x: shX + 4, y: shY },
+        legLeft: [
+          { x: hipX, y: hipY },
+          { x: lerp(154, 134, p), y: lerp(202, 236, p) },
+          { x: lerp(148, 98, p), y: 246 },
+        ],
+        legRight: [
+          { x: hipX, y: hipY },
+          { x: lerp(172, 194, p), y: lerp(202, 196, p) },
+          { x: 192, y: 246 },
+        ],
+        footLeft: [
+          { x: lerp(142, 90, p), y: 246 },
+          { x: lerp(154, 106, p), y: 246 },
+        ],
+        footRight: [
+          { x: 190, y: 246 },
+          { x: 210, y: 246 },
+        ],
+        leftArm: null,
+        rightArm: {
+          shoulder: { x: shX, y: shY + 4 },
+          elbow: { x: shX - 2, y: shY + 42 },
+          hand: { x: shX - 2, y: shY + 78 },
+          dumbbellAngleDeg: 0,
+        },
+        motionGuidePath: 'M 158 170 L 152 206',
+      };
+    },
+  },
+
+  'glute-bridge': {
+    id: 'glute-bridge',
+    label: 'Dumbbell Glute Bridge',
+    view: 'floor',
+    cues: ['Drive Hips Up', 'Squeeze Glutes', 'Lower Slowly', 'Reset on Mat'],
+    computePose(p) {
+      const hipX = lerp(174, 172, p);
+      const hipY = lerp(224, 178, p);
+      const kneeX = lerp(212, 218, p);
+      const kneeY = lerp(176, 174, p);
+
+      return {
+        floorY: 236,
+        head: { x: 70, y: 218 },
+        torsoHip: { x: hipX, y: hipY },
+        torsoShoulder: { x: 100, y: 224 },
+        clavicleStart: { x: 100, y: 220 },
+        clavicleEnd: { x: 100, y: 228 },
+        legLeft: [
+          { x: hipX, y: hipY },
+          { x: kneeX - 3, y: kneeY },
+          { x: 238, y: 234 },
+        ],
+        legRight: [
+          { x: hipX, y: hipY },
+          { x: kneeX, y: kneeY },
+          { x: 244, y: 234 },
+        ],
+        footLeft: null,
+        footRight: [
+          { x: 242, y: 234 },
+          { x: 260, y: 234 },
+        ],
+        leftArm: null,
+        rightArm: {
+          shoulder: { x: 104, y: 222 },
+          elbow: { x: lerp(138, 138, p), y: lerp(226, 204, p) },
+          hand: { x: hipX, y: hipY - 10 },
+          dumbbellAngleDeg: lerp(0, -18, p),
+        },
+        motionGuidePath: 'M 174 214 L 172 168',
+      };
+    },
+  },
+
+  crunch: {
+    id: 'crunch',
+    label: 'Floor Crunches',
+    view: 'floor',
+    cues: ['Curl Shoulders Up', 'Squeeze Abs', 'Lower Slowly', 'Relax Neck'],
+    computePose(p) {
+      const shX = lerp(102, 132, p);
+      const shY = lerp(222, 178, p);
+      const hdX = lerp(74, 118, p);
+      const hdY = lerp(216, 152, p);
+      const hand = quadBezier({ x: 164, y: 202 }, { x: 182, y: 184 }, { x: 198, y: 168 }, p);
+
+      return {
+        floorY: 236,
+        head: { x: hdX, y: hdY },
+        torsoHip: { x: 180, y: 224 },
+        torsoShoulder: { x: shX, y: shY },
+        clavicleStart: { x: shX, y: shY - 3 },
+        clavicleEnd: { x: shX, y: shY + 4 },
+        legLeft: [
+          { x: 180, y: 224 },
+          { x: 214, y: 176 },
+          { x: 240, y: 234 },
+        ],
+        legRight: [
+          { x: 180, y: 224 },
+          { x: 218, y: 176 },
+          { x: 246, y: 234 },
+        ],
+        footLeft: null,
+        footRight: [
+          { x: 244, y: 234 },
+          { x: 262, y: 234 },
+        ],
+        leftArm: null,
+        rightArm: {
+          shoulder: { x: shX + 4, y: shY + 2 },
+          elbow: { x: lerp(134, 166, p), y: lerp(212, 174, p) },
+          hand,
+          dumbbellAngleDeg: 0,
+        },
+        motionGuidePath: 'M 164 202 Q 182 184 198 168',
+      };
+    },
+  },
+
+  'leg-raise': {
+    id: 'leg-raise',
+    label: 'Lying Leg Raises',
+    view: 'floor',
+    cues: ['Lift Legs Up', 'Core Brace', 'Lower Under Control', 'Hover Above Mat'],
+    computePose(p) {
+      const hipX = 164;
+      const hipY = 224;
+      const angle = lerp(-0.06, -Math.PI * 0.48, p);
+      const kneeX = hipX + Math.cos(angle) * 44;
+      const kneeY = hipY + Math.sin(angle) * 44;
+      const ankleX = hipX + Math.cos(angle) * 84;
+      const ankleY = hipY + Math.sin(angle) * 84;
+
+      return {
+        floorY: 236,
+        head: { x: 68, y: 218 },
+        torsoHip: { x: hipX, y: hipY },
+        torsoShoulder: { x: 96, y: 224 },
+        clavicleStart: { x: 96, y: 220 },
+        clavicleEnd: { x: 96, y: 228 },
+        legLeft: [
+          { x: hipX, y: hipY },
+          { x: kneeX - 3, y: kneeY },
+          { x: ankleX - 3, y: ankleY },
+        ],
+        legRight: [
+          { x: hipX, y: hipY },
+          { x: kneeX, y: kneeY },
+          { x: ankleX, y: ankleY },
+        ],
+        footLeft: null,
+        footRight: [
+          { x: ankleX, y: ankleY },
+          {
+            x: ankleX + Math.cos(angle - Math.PI / 2) * 14,
+            y: ankleY + Math.sin(angle - Math.PI / 2) * 14,
+          },
+        ],
+        leftArm: null,
+        rightArm: {
+          shoulder: { x: 102, y: 224 },
+          elbow: { x: 132, y: 228 },
+          hand: { x: 162, y: 228 },
+          dumbbellAngleDeg: 0,
+        },
+        motionGuidePath: 'M 248 219 A 84 84 0 0 0 169 140',
+      };
+    },
+  },
+
+  'russian-twist': {
+    id: 'russian-twist',
+    label: 'Dumbbell Russian Twists',
+    view: 'front',
+    cues: ['Rotate Right', 'Oblique Squeeze', 'Rotate Left', 'Oblique Squeeze'],
+    computePose(p) {
+      const shX = lerp(154, 166, p);
+      const hand = quadBezier({ x: 112, y: 196 }, { x: 160, y: 176 }, { x: 208, y: 196 }, p);
+      const twistScale = lerp(0.55, 1, 1 - Math.abs(p - 0.5) * 2);
+
+      return {
+        floorY: 236,
+        head: { x: shX, y: 124 },
+        torsoHip: { x: 160, y: 214 },
+        torsoShoulder: { x: shX, y: 152 },
+        clavicleStart: { x: shX - 18, y: 154 },
+        clavicleEnd: { x: shX + 18, y: 154 },
+        legLeft: [
+          { x: 160, y: 214 },
+          { x: 138, y: 186 },
+          { x: 132, y: 232 },
+        ],
+        legRight: [
+          { x: 160, y: 214 },
+          { x: 182, y: 186 },
+          { x: 188, y: 232 },
+        ],
+        footLeft: [
+          { x: 124, y: 232 },
+          { x: 136, y: 232 },
+        ],
+        footRight: [
+          { x: 184, y: 232 },
+          { x: 196, y: 232 },
+        ],
+        leftArm: {
+          shoulder: { x: shX - 18, y: 154 },
+          elbow: { x: lerp(124, 158, p), y: 184 },
+          hand,
+          dumbbellAngleDeg: 0,
+        },
+        rightArm: {
+          shoulder: { x: shX + 18, y: 154 },
+          elbow: { x: lerp(162, 196, p), y: 184 },
+          hand,
+          dumbbellAngleDeg: lerp(-12, 12, p),
+          dumbbellScaleX: twistScale,
+        },
+        hideLeftDumbbell: true,
+        motionGuidePath: 'M 112 196 Q 160 176 208 196',
+      };
+    },
+  },
+
+  'plank-tap': {
+    id: 'plank-tap',
+    label: 'High Plank Shoulder Taps',
+    view: 'floor',
+    cues: ['Tap Shoulder', 'Keep Hips Square', 'Plant Hand', 'Brace Core'],
+    computePose(p) {
+      const hand = quadBezier({ x: 108, y: 234 }, { x: 126, y: 198 }, { x: 112, y: 164 }, p);
+      return {
+        floorY: 236,
+        head: { x: 76, y: 142 },
+        torsoHip: { x: 178, y: 192 },
+        torsoShoulder: { x: 104, y: 158 },
+        clavicleStart: { x: 102, y: 156 },
+        clavicleEnd: { x: 108, y: 160 },
+        legLeft: [
+          { x: 178, y: 192 },
+          { x: 212, y: 212 },
+          { x: 244, y: 234 },
+        ],
+        legRight: [
+          { x: 178, y: 192 },
+          { x: 216, y: 212 },
+          { x: 250, y: 234 },
+        ],
+        footLeft: null,
+        footRight: [
+          { x: 246, y: 234 },
+          { x: 258, y: 234 },
+        ],
+        leftArm: {
+          shoulder: { x: 102, y: 158 },
+          elbow: { x: 100, y: 196 },
+          hand: { x: 100, y: 234 },
+          dumbbellAngleDeg: 0,
+        },
+        rightArm: {
+          shoulder: { x: 108, y: 160 },
+          elbow: { x: lerp(108, 128, p), y: lerp(196, 188, p) },
+          hand,
+          dumbbellAngleDeg: 0,
+        },
+        motionGuidePath: 'M 108 234 Q 126 198 112 164',
       };
     },
   },

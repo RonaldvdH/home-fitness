@@ -51,6 +51,8 @@ describe('schema normalization & migration', () => {
 
     expect(normalized).not.toBeNull();
     expect(normalized?.animationType).toBe('overhead-press');
+    expect(normalized?.muscleGroups).toEqual(['upper']);
+    expect(normalized?.durations).toEqual([10, 15, 20]);
     expect(normalized?.steps.length).toBeGreaterThan(0);
     expect(normalized?.equipment.kind).toBe('dumbbells');
   });

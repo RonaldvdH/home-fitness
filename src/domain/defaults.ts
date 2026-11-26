@@ -14,6 +14,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     id: 'ex-overhead-press',
     name: 'Dumbbell Overhead Shoulder Press',
     muscleGroup: 'Shoulders (Deltoids) • Triceps',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -33,6 +35,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     id: 'ex-bent-row',
     name: 'Bent-Over Dumbbell Rows',
     muscleGroup: 'Upper & Mid-Back • Rear Delts',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -52,6 +56,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     id: 'ex-floor-press',
     name: 'Dumbbell Floor Chest Press',
     muscleGroup: 'Chest (Pectorals) • Triceps',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -71,6 +77,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     id: 'ex-bicep-curl',
     name: 'Standing Bicep Curls',
     muscleGroup: 'Biceps • Forearms',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -92,6 +100,8 @@ export const WARMUP_ITEM: Exercise = {
   id: 'phase-warmup',
   name: 'Warm-Up: Arm Circles & Mobility',
   muscleGroup: 'Shoulders • Thoracic Spine • Elbows',
+  muscleGroups: ['upper', 'lower', 'abs'],
+  durations: [10, 15, 20],
   equipment: {
     kind: 'bodyweight',
     label: 'Bodyweight Mobility',
@@ -110,6 +120,8 @@ export const COOLDOWN_ITEM: Exercise = {
   id: 'phase-cooldown',
   name: 'Cool-Down: Upper Body Stretch',
   muscleGroup: 'Deltoids • Chest • Biceps',
+  muscleGroups: ['upper', 'lower', 'abs'],
+  durations: [10, 15, 20],
   equipment: {
     kind: 'bodyweight',
     label: 'Recovery Stretch',
