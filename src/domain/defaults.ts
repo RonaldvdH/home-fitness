@@ -80,11 +80,11 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     animationType: 'bicep-curl',
     active: true,
     steps: [
-      'Stand tall with the 5kg dumbbells at your sides, palms facing forward, and elbows pinned close to your ribs.',
-      'Curl both weights smoothly up toward your shoulders without swinging your torso or drifting your elbows forward.',
-      'Lower the dumbbells all the way back down to full extension under steady tension.',
+      'Stand tall with the 5kg dumbbells hanging naturally at your sides in a neutral grip (palms facing your thighs) and elbows pinned close to your ribs.',
+      'Curl both weights smoothly upward—rotating your wrists halfway up so your palms turn to face your shoulders without swinging your torso.',
+      'Lower the dumbbells under steady tension, rotating your wrists back to a neutral grip beside your thighs.',
     ],
-    tip: 'Squeeze your biceps hard at the top for half a second before lowering.',
+    tip: 'Squeeze your biceps with palms facing up at the top for half a second before rotating smoothly back down.',
   },
 ];
 

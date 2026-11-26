@@ -31,11 +31,13 @@ function setDumbbellTransform(
   x: number,
   y: number,
   angleDeg: number,
+  scaleX = 1,
 ): void {
   if (!el) return;
+  const scalePart = Math.abs(scaleX - 1) > 0.005 ? ` scale(${scaleX.toFixed(2)}, 1)` : '';
   el.setAttribute(
     'transform',
-    `translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${angleDeg.toFixed(1)})`,
+    `translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${angleDeg.toFixed(1)})${scalePart}`,
   );
 }
 
@@ -165,6 +167,7 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
               pose.leftArm.hand.x,
               pose.leftArm.hand.y,
               pose.leftArm.dumbbellAngleDeg,
+              pose.leftArm.dumbbellScaleX,
             );
           }
         }
@@ -201,6 +204,7 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
             pose.rightArm.hand.x,
             pose.rightArm.hand.y,
             pose.rightArm.dumbbellAngleDeg,
+            pose.rightArm.dumbbellScaleX,
           );
         }
       }

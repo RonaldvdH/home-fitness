@@ -71,4 +71,25 @@ describe('animations pose registry & math', () => {
       }
     }
   });
+
+  it('supinates dumbbells smoothly during bicep-curl and keeps hands clear of the torso', () => {
+    const bottom = ANIMATION_REGISTRY['bicep-curl'].computePose(0);
+    const mid = ANIMATION_REGISTRY['bicep-curl'].computePose(0.5);
+    const top = ANIMATION_REGISTRY['bicep-curl'].computePose(1);
+
+    // Neutral grip (end-on foreshortened) at bottom -> halfway rotated -> full palms-up at top
+    expect(bottom.leftArm?.dumbbellScaleX).toBeLessThan(0.35);
+    expect(mid.leftArm?.dumbbellScaleX).toBeGreaterThan(bottom.leftArm!.dumbbellScaleX!);
+    expect(mid.leftArm?.dumbbellScaleX).toBeLessThan(top.leftArm!.dumbbellScaleX!);
+    expect(top.leftArm?.dumbbellScaleX).toBeCloseTo(1, 4);
+
+    // Dumbbells stay well separated at the top (each dumbbell is 42px wide)
+    expect(top.rightArm.hand.x - top.leftArm!.hand.x).toBeGreaterThanOrEqual(60);
+
+    // Motion guide starts and ends on exact hand endpoints
+    expect(bottom.motionGuidePath).toContain(
+      `M ${bottom.leftArm!.hand.x} ${bottom.leftArm!.hand.y}`,
+    );
+    expect(top.motionGuidePath).toContain(`${top.leftArm!.hand.x} ${top.leftArm!.hand.y}`);
+  });
 });
