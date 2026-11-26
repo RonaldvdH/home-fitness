@@ -68,6 +68,8 @@ export function buildCircuitTimeline(
             id: `rest-before-${nextEx.id}-r${r}-${idx}`,
             name: `Rest & Prep: ${nextEx.name}`,
             muscleGroup: `Next: ${nextEx.muscleGroup}`,
+            muscleGroups: [...nextEx.muscleGroups],
+            durations: [...nextEx.durations],
             equipment: nextEx.equipment,
             animationType: nextEx.animationType,
             active: true,

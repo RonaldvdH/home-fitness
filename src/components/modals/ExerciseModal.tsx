@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
-import type { AnimationId, Exercise } from '../../domain/schema';
+import {
+  inferMuscleGroupTags,
+  MUSCLE_GROUP_TAGS,
+  WORKOUT_DURATIONS,
+  type AnimationId,
+  type Exercise,
+  type MuscleGroupTag,
+  type WorkoutDurationMin,
+} from '../../domain/schema';
 import { ANIMATION_OPTIONS } from '../../engine/animations';
 import type { ExerciseFormInput } from '../../state/workoutStore';
 import { ModalDialog } from './ModalDialog';
@@ -11,9 +19,17 @@ export interface ExerciseModalProps {
   onSave: (input: ExerciseFormInput) => void;
 }
 
+const MUSCLE_TAG_LABELS: Record<MuscleGroupTag, string> = {
+  upper: 'Upper Body',
+  lower: 'Lower Body',
+  abs: 'Abs & Core',
+};
+
 export function ExerciseModal({ open, editingExercise, onClose, onSave }: ExerciseModalProps) {
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('');
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupTag[]>(['upper']);
+  const [durations, setDurations] = useState<WorkoutDurationMin[]>([...WORKOUT_DURATIONS]);
   const [equipmentLabel, setEquipmentLabel] = useState('2x 5kg Dumbbells');
   const [animationType, setAnimationType] = useState<AnimationId>('overhead-press');
   const [step1, setStep1] = useState('');
@@ -26,6 +42,8 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
     if (editingExercise) {
       setName(editingExercise.name);
       setMuscleGroup(editingExercise.muscleGroup);
+      setMuscleGroups([...editingExercise.muscleGroups]);
+      setDurations([...editingExercise.durations]);
       setEquipmentLabel(editingExercise.equipment.label);
       setAnimationType(editingExercise.animationType);
       setStep1(editingExercise.steps[0] ?? '');
@@ -35,6 +53,8 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
     } else {
       setName('');
       setMuscleGroup('');
+      setMuscleGroups(['upper']);
+      setDurations([...WORKOUT_DURATIONS]);
       setEquipmentLabel('2x 5kg Dumbbells');
       setAnimationType('overhead-press');
       setStep1('');
@@ -44,6 +64,25 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
     }
   }, [open, editingExercise]);
 
+  const toggleMuscleTag = (tag: MuscleGroupTag): void => {
+    setMuscleGroups((prev) => {
+      if (prev.includes(tag)) {
+        return prev.length > 1 ? prev.filter((item) => item !== tag) : prev;
+      }
+      return [...prev, tag];
+    });
+  };
+
+  const toggleDurationTag = (mins: WorkoutDurationMin): void => {
+    setDurations((prev) => {
+      if (prev.includes(mins)) {
+        return prev.length > 1 ? prev.filter((item) => item !== mins) : prev;
+      }
+      const next = new Set([...prev, mins]);
+      return WORKOUT_DURATIONS.filter((d) => next.has(d));
+    });
+  };
+
   const handleSubmit = (event: SubmitEvent): void => {
     event.preventDefault();
     if (!name.trim() || !muscleGroup.trim()) return;
@@ -52,6 +91,8 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
       ...(editingExercise ? { id: editingExercise.id } : {}),
       name,
       muscleGroup,
+      muscleGroups,
+      durations,
       equipment: equipmentLabel.trim() || '2x 5kg Dumbbells',
       animationType,
       steps: [step1, step2, step3].filter((step) => step.trim().length > 0),
@@ -63,7 +104,7 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
   return (
     <ModalDialog
       open={open}
-      title={editingExercise ? 'Edit Exercise' : 'Add Dumbbell Exercise'}
+      title={editingExercise ? 'Edit Exercise' : 'Add Exercise'}
       titleId="modal-exercise-heading"
       onClose={onClose}
     >
@@ -106,9 +147,13 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
             <select
               id="field-ex-anim"
               value={animationType}
-              onChange={(e) =>
-                setAnimationType((e.target as HTMLSelectElement).value as AnimationId)
-              }
+              onChange={(e) => {
+                const nextAnim = (e.target as HTMLSelectElement).value as AnimationId;
+                setAnimationType(nextAnim);
+                if (!editingExercise) {
+                  setMuscleGroups(inferMuscleGroupTags(nextAnim, muscleGroup));
+                }
+              }}
               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500"
             >
               {ANIMATION_OPTIONS.map((opt) => (
@@ -117,6 +162,57 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Workout Builder Tags: Muscle Group & Duration */}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <span class="block text-xs font-semibold text-slate-300 mb-1.5">Muscle Group Tags</span>
+            <div class="flex flex-wrap gap-1.5">
+              {MUSCLE_GROUP_TAGS.map((tag) => {
+                const active = muscleGroups.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleMuscleTag(tag)}
+                    class={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition ${
+                      active
+                        ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {MUSCLE_TAG_LABELS[tag]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <span class="block text-xs font-semibold text-slate-300 mb-1.5">Fit for Durations</span>
+            <div class="flex flex-wrap gap-1.5">
+              {WORKOUT_DURATIONS.map((mins) => {
+                const active = durations.includes(mins);
+                return (
+                  <button
+                    key={mins}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleDurationTag(mins)}
+                    class={`px-2.5 py-1 rounded-lg border text-xs font-mono font-semibold transition ${
+                      active
+                        ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {mins}m
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

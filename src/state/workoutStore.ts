@@ -5,21 +5,21 @@
  */
 
 import { cloneDefaultExercises } from '../domain/defaults';
-import {
-  generateWorkoutPreset,
-  type TargetMuscleGroup,
-  type WorkoutDurationMin,
-} from '../domain/presets';
+import type { GeneratedWorkoutPreset } from '../domain/presets';
 import {
   MAX_HISTORY_RECORDS,
+  normalizeDurationTags,
   normalizeEquipment,
+  normalizeMuscleGroupTags,
   type AnimationId,
   type AppDataV3,
   type EquipmentSpec,
   type Exercise,
+  type MuscleGroupTag,
   type Routine,
   type SessionRecord,
   type TimelineStep,
+  type WorkoutDurationMin,
   type WorkoutSettings,
 } from '../domain/schema';
 import { buildCircuitTimeline, computeTotalDuration } from '../domain/timeline';
@@ -51,6 +51,8 @@ export interface ExerciseFormInput {
   id?: string;
   name: string;
   muscleGroup: string;
+  muscleGroups?: MuscleGroupTag[];
+  durations?: WorkoutDurationMin[];
   equipment?: EquipmentSpec | string;
   animationType: AnimationId;
   steps: string[];
@@ -94,11 +96,7 @@ export interface WorkoutStore {
   toggleExerciseActive: (exerciseId: string) => void;
   deleteExercise: (exerciseId: string) => void;
   restoreDefaultExercises: () => void;
-  applyWorkoutPreset: (
-    durationMin: WorkoutDurationMin,
-    target: TargetMuscleGroup,
-    options?: { autoStart?: boolean },
-  ) => void;
+  applyWorkoutPreset: (preset: GeneratedWorkoutPreset, options?: { autoStart?: boolean }) => void;
   updateSettings: (next: Partial<WorkoutSettings>) => void;
   toggleSound: () => void;
   toggleVoice: () => void;
@@ -368,10 +366,19 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
           ? existing.equipment
           : normalizeEquipment('2x 5kg Dumbbells');
 
+      const muscleGroups = normalizeMuscleGroupTags(
+        input.muscleGroups ?? existing?.muscleGroups,
+        input.animationType,
+        trimmedMuscles,
+      );
+      const durations = normalizeDurationTags(input.durations ?? existing?.durations);
+
       const nextExercise: Exercise = {
         id: existing ? existing.id : `ex-${Date.now()}`,
         name: trimmedName,
         muscleGroup: trimmedMuscles,
+        muscleGroups,
+        durations,
         equipment,
         animationType: input.animationType,
         active: existing ? existing.active : true,
@@ -442,17 +449,12 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       pushToast('Default dumbbell exercises restored.');
     },
 
-    applyWorkoutPreset(
-      durationMin: WorkoutDurationMin,
-      target: TargetMuscleGroup,
-      options?: { autoStart?: boolean },
-    ) {
-      const preset = generateWorkoutPreset(durationMin, target, activeRoutine.settings);
+    applyWorkoutPreset(preset: GeneratedWorkoutPreset, options?: { autoStart?: boolean }) {
       updateActiveRoutine((routine) => ({
         ...routine,
         name: preset.routineName,
-        exercises: preset.exercises,
-        settings: preset.settings,
+        exercises: structuredClone(preset.exercises) as Exercise[],
+        settings: { ...routine.settings, ...preset.settings },
       }));
       if (options?.autoStart) {
         this.start();

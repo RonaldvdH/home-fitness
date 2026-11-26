@@ -1,20 +1,22 @@
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import {
   generateWorkoutPreset,
   TARGET_MUSCLE_GROUP_OPTIONS,
   WORKOUT_DURATIONS,
+  type GeneratedWorkoutPreset,
   type TargetMuscleGroup,
   type WorkoutDurationMin,
 } from '../../domain/presets';
-import type { WorkoutSettings } from '../../domain/schema';
+import type { Exercise, WorkoutSettings } from '../../domain/schema';
 import { formatMMSS } from '../../domain/timeline';
 import { ModalDialog } from './ModalDialog';
 
 export interface NewWorkoutModalProps {
   open: boolean;
   currentSettings: WorkoutSettings;
+  userExercises: readonly Exercise[];
   onClose: () => void;
-  onApply: (durationMin: WorkoutDurationMin, target: TargetMuscleGroup, autoStart: boolean) => void;
+  onApply: (preset: GeneratedWorkoutPreset, autoStart: boolean) => void;
 }
 
 const DURATION_TAGLINES: Record<WorkoutDurationMin, string> = {
@@ -23,19 +25,56 @@ const DURATION_TAGLINES: Record<WorkoutDurationMin, string> = {
   20: 'Full Burn',
 };
 
-export function NewWorkoutModal({ open, currentSettings, onClose, onApply }: NewWorkoutModalProps) {
+export function NewWorkoutModal({
+  open,
+  currentSettings,
+  userExercises,
+  onClose,
+  onApply,
+}: NewWorkoutModalProps) {
   const [durationMin, setDurationMin] = useState<WorkoutDurationMin>(15);
   const [target, setTarget] = useState<TargetMuscleGroup>('upper');
-
-  const preview = useMemo(
-    () => generateWorkoutPreset(durationMin, target, currentSettings),
-    [durationMin, target, currentSettings],
+  const [preview, setPreview] = useState<GeneratedWorkoutPreset>(() =>
+    generateWorkoutPreset({
+      durationMin: 15,
+      target: 'upper',
+      currentSettings,
+      userExercises,
+    }),
   );
 
+  // Re-build a fresh varied lineup whenever the overlay opens or filters change.
+  useEffect(() => {
+    if (!open) return;
+    setPreview((prev) =>
+      generateWorkoutPreset({
+        durationMin,
+        target,
+        currentSettings,
+        userExercises,
+        previousExerciseIds: prev.exercises.map((e) => e.id),
+      }),
+    );
+  }, [open, durationMin, target, currentSettings, userExercises]);
+
+  const handleShuffle = (): void => {
+    setPreview((prev) =>
+      generateWorkoutPreset({
+        durationMin,
+        target,
+        currentSettings,
+        userExercises,
+        previousExerciseIds: prev.exercises.map((e) => e.id),
+      }),
+    );
+  };
+
   const handleApply = (autoStart: boolean): void => {
-    onApply(durationMin, target, autoStart);
+    onApply(preview, autoStart);
     onClose();
   };
+
+  const canShuffle = preview.matchingPoolSize > preview.exercises.length;
 
   return (
     <ModalDialog
@@ -114,27 +153,55 @@ export function NewWorkoutModal({ open, currentSettings, onClose, onApply }: New
           </div>
         </div>
 
-        {/* Live Workout Plan Preview */}
+        {/* Live Varied Workout Plan Preview */}
         <div
           data-testid="new-workout-preview"
           class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2"
         >
           <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span class="font-bold text-white">{preview.routineName}</span>
-            <span class="font-mono font-bold text-emerald-400">
-              {formatMMSS(preview.estimatedDurationSec)} total
-            </span>
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="font-bold text-white truncate">{preview.routineName}</span>
+              <span class="font-mono font-bold text-emerald-400 shrink-0">
+                {formatMMSS(preview.estimatedDurationSec)}
+              </span>
+            </div>
+
+            {canShuffle && (
+              <button
+                type="button"
+                onClick={handleShuffle}
+                class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-emerald-300 flex items-center gap-1 transition active:scale-95"
+              >
+                <svg
+                  class="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  aria-hidden="true"
+                >
+                  <polyline points="16 3 21 3 21 8" />
+                  <line x1="4" y1="20" x2="21" y2="3" />
+                  <polyline points="21 16 21 21 16 21" />
+                  <line x1="15" y1="15" x2="21" y2="21" />
+                  <line x1="4" y1="4" x2="9" y2="9" />
+                </svg>
+                <span>Shuffle</span>
+              </button>
+            )}
           </div>
+
           <p class="text-[11px] text-slate-400">
-            {preview.exercises.length} exercises • {preview.settings.rounds} rounds •{' '}
-            {preview.settings.workSec}s work / {preview.settings.restSec}s rest • Warm-up &
-            Cool-down included
+            Picked {preview.exercises.length} of {preview.matchingPoolSize} tagged moves •{' '}
+            {preview.settings.rounds} rounds ({preview.settings.workSec}s /{' '}
+            {preview.settings.restSec}s)
           </p>
+
           <div class="flex flex-wrap gap-1.5 pt-0.5">
             {preview.exercises.map((ex) => (
               <span
                 key={ex.id}
-                class="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300"
+                class="px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-200"
               >
                 {ex.name}
               </span>

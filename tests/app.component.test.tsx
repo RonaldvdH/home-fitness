@@ -94,7 +94,7 @@ describe('<App /> integration flows', () => {
     store.destroy();
   });
 
-  it('builds and starts a 10 min Abs & Core workout from the New Workout overlay', () => {
+  it('builds, shuffles, and starts a tagged 10 min Abs & Core workout from the New Workout overlay', () => {
     const store = createWorkoutStore({ storage: createMemoryAdapter() });
     render(<App store={store} />);
 
@@ -105,20 +105,24 @@ describe('<App /> integration flows', () => {
     fireEvent.click(screen.getByText('Abs & Core'));
 
     const preview = screen.getByTestId('new-workout-preview');
-    expect(preview.textContent).toContain('10:00 total');
-    expect(preview.textContent).toContain('Dumbbell Russian Twists');
+    expect(preview.textContent).toContain('10:00');
+    expect(preview.textContent).toContain('tagged moves');
+
+    // Shuffle button should be available since >4 exercises are tagged for 10m abs
+    fireEvent.click(screen.getByText('Shuffle'));
 
     fireEvent.click(screen.getByText('Start Workout'));
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByTestId('active-routine-name').textContent).toBe('10 min • Abs & Core');
     expect(store.getState().timer.status).toBe('running');
-    expect(store.getState().activeRoutine.exercises.map((e) => e.animationType)).toEqual([
-      'crunch',
-      'russian-twist',
-      'leg-raise',
-      'plank-tap',
-    ]);
+
+    const loaded = store.getState().activeRoutine.exercises;
+    expect(loaded).toHaveLength(4);
+    for (const ex of loaded) {
+      expect(ex.muscleGroups).toContain('abs');
+      expect(ex.durations).toContain(10);
+    }
 
     store.destroy();
   });

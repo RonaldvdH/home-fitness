@@ -176,10 +176,9 @@ export function App({ store: externalStore }: AppProps) {
       <NewWorkoutModal
         open={newWorkoutModalOpen}
         currentSettings={state.activeRoutine.settings}
+        userExercises={state.activeRoutine.exercises}
         onClose={() => setNewWorkoutModalOpen(false)}
-        onApply={(durationMin, target, autoStart) =>
-          store.applyWorkoutPreset(durationMin, target, { autoStart })
-        }
+        onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
       />
 
       <ExerciseModal

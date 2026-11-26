@@ -1,16 +1,21 @@
 /**
- * Curated workout preset catalog and generator for the New Workout setup overlay.
- * Pure TypeScript module with zero DOM or storage side effects.
+ * Tagged exercise catalog and dynamic variation builder for the New Workout overlay.
+ * Exercises are filtered by their `durations` and `muscleGroups` tags and shuffled
+ * to produce varied circuits while honoring user-created custom exercises.
  */
 
 import { cloneDefaultExercises } from './defaults';
-import type { Exercise, WorkoutSettings } from './schema';
+import {
+  WORKOUT_DURATIONS,
+  type Exercise,
+  type MuscleGroupTag,
+  type TargetMuscleGroup,
+  type WorkoutDurationMin,
+  type WorkoutSettings,
+} from './schema';
 import { buildCircuitTimeline, computeTotalDuration } from './timeline';
 
-export const WORKOUT_DURATIONS = [10, 15, 20] as const;
-export type WorkoutDurationMin = (typeof WORKOUT_DURATIONS)[number];
-
-export type TargetMuscleGroup = 'upper' | 'lower' | 'abs' | 'full';
+export { WORKOUT_DURATIONS, type MuscleGroupTag, type TargetMuscleGroup, type WorkoutDurationMin };
 
 export interface TargetMuscleGroupOption {
   id: TargetMuscleGroup;
@@ -41,11 +46,79 @@ export const TARGET_MUSCLE_GROUP_OPTIONS: readonly TargetMuscleGroupOption[] = [
   },
 ];
 
+const EXTRA_UPPER_EXERCISES: readonly Exercise[] = [
+  {
+    id: 'ex-lateral-raise',
+    name: 'Dumbbell Lateral Raises',
+    muscleGroup: 'Side Deltoids • Upper Traps',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
+    animationType: 'lateral-raise',
+    active: true,
+    steps: [
+      'Stand tall holding both 5kg dumbbells slightly in front of your thighs with a soft bend in your elbows.',
+      'Raise both arms out to your sides in a smooth arc until elbows reach shoulder height.',
+      'Lower the dumbbells back down over a controlled 2-second count without letting them swing.',
+    ],
+    tip: 'Lead slightly with your elbows and keep your shoulders relaxed down away from your ears.',
+  },
+  {
+    id: 'ex-front-raise',
+    name: 'Alternating Front Raises',
+    muscleGroup: 'Front Deltoids • Upper Chest',
+    muscleGroups: ['upper'],
+    durations: [15, 20],
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
+    animationType: 'front-raise',
+    active: true,
+    steps: [
+      'Stand tall with core braced and hold the 5kg dumbbells in front of your thighs, palms facing you.',
+      'Lift smoothly forward to shoulder height with a soft elbow while keeping your torso still.',
+      'Lower under control back to your thighs before initiating the next rep.',
+    ],
+    tip: 'Avoid leaning backward—exhale as you lift to keep your ribs stacked over your hips.',
+  },
+  {
+    id: 'ex-tricep-extension',
+    name: 'Overhead Tricep Extensions',
+    muscleGroup: 'Triceps • Core Stability',
+    muscleGroups: ['upper'],
+    durations: [10, 15, 20],
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
+    animationType: 'tricep-extension',
+    active: true,
+    steps: [
+      'Press both 5kg dumbbells overhead with upper arms tucked close beside your ears and core braced.',
+      'Bend strictly at your elbows to lower the weights smoothly behind your head until you feel a tricep stretch.',
+      'Extend your elbows straight back up overhead and squeeze your triceps at lockout.',
+    ],
+    tip: 'Keep your elbows pointed forward instead of flaring wide to isolate the long head of your triceps.',
+  },
+];
+
 const LOWER_BODY_EXERCISES: readonly Exercise[] = [
   {
     id: 'ex-squat',
     name: 'Dumbbell Squats',
     muscleGroup: 'Quadriceps • Glutes • Core',
+    muscleGroups: ['lower'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -65,6 +138,8 @@ const LOWER_BODY_EXERCISES: readonly Exercise[] = [
     id: 'ex-rdl',
     name: 'Romanian Deadlifts (RDL)',
     muscleGroup: 'Hamstrings • Glutes • Lower Back',
+    muscleGroups: ['lower'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -84,6 +159,8 @@ const LOWER_BODY_EXERCISES: readonly Exercise[] = [
     id: 'ex-reverse-lunge',
     name: 'Dumbbell Reverse Lunges',
     muscleGroup: 'Quads • Glutes • Balance',
+    muscleGroups: ['lower'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -103,6 +180,8 @@ const LOWER_BODY_EXERCISES: readonly Exercise[] = [
     id: 'ex-glute-bridge',
     name: 'Dumbbell Glute Bridges',
     muscleGroup: 'Glutes • Hamstrings • Core',
+    muscleGroups: ['lower', 'abs'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -118,6 +197,27 @@ const LOWER_BODY_EXERCISES: readonly Exercise[] = [
     ],
     tip: 'Keep your ribs tucked down at the top so the lift comes from your glutes instead of your lower back.',
   },
+  {
+    id: 'ex-tempo-squat',
+    name: 'Slow-Tempo Dumbbell Squats',
+    muscleGroup: 'Quads • Glutes • Time Under Tension',
+    muscleGroups: ['lower'],
+    durations: [15, 20],
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 2,
+      label: '2x 5kg Dumbbells • Standing',
+    },
+    animationType: 'squat',
+    active: true,
+    steps: [
+      'Hold both 5kg dumbbells at your sides with feet shoulder-width apart and brace your core.',
+      'Lower into a deep squat over a slow 3-second count and hold the bottom position for 1 full second.',
+      'Drive strongly up to standing and immediately begin your next controlled descent.',
+    ],
+    tip: 'The slow eccentric builds serious leg strength even with moderate 5kg dumbbells.',
+  },
 ];
 
 const ABS_EXERCISES: readonly Exercise[] = [
@@ -125,6 +225,8 @@ const ABS_EXERCISES: readonly Exercise[] = [
     id: 'ex-crunch',
     name: 'Controlled Floor Crunches',
     muscleGroup: 'Upper Abs • Core',
+    muscleGroups: ['abs'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'bodyweight',
       label: 'Bodyweight • Floor / Mat',
@@ -142,6 +244,8 @@ const ABS_EXERCISES: readonly Exercise[] = [
     id: 'ex-russian-twist',
     name: 'Dumbbell Russian Twists',
     muscleGroup: 'Obliques • Rotational Core',
+    muscleGroups: ['abs'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -161,6 +265,8 @@ const ABS_EXERCISES: readonly Exercise[] = [
     id: 'ex-leg-raise',
     name: 'Lying Leg Raises',
     muscleGroup: 'Lower Abs • Hip Flexors',
+    muscleGroups: ['abs'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'bodyweight',
       label: 'Bodyweight • Floor / Mat',
@@ -178,6 +284,8 @@ const ABS_EXERCISES: readonly Exercise[] = [
     id: 'ex-plank-tap',
     name: 'High Plank Shoulder Taps',
     muscleGroup: 'Deep Core • Anti-Rotation • Shoulders',
+    muscleGroups: ['abs', 'upper'],
+    durations: [10, 15, 20],
     equipment: {
       kind: 'bodyweight',
       label: 'Bodyweight • Floor / Mat',
@@ -191,41 +299,127 @@ const ABS_EXERCISES: readonly Exercise[] = [
     ],
     tip: 'Imagine balancing a glass of water on your lower back—zero hip rock is the goal.',
   },
+  {
+    id: 'ex-weighted-crunch',
+    name: 'Weighted Dumbbell Crunches',
+    muscleGroup: 'Upper Abs • Loaded Core',
+    muscleGroups: ['abs'],
+    durations: [15, 20],
+    equipment: {
+      kind: 'dumbbells',
+      weightKg: 5,
+      count: 1,
+      label: '1x 5kg Dumbbell • Floor / Mat',
+    },
+    animationType: 'crunch',
+    active: true,
+    steps: [
+      'Lie on your back with knees bent and hold one 5kg dumbbell vertically over your chest with arms straight.',
+      'Exhale as you curl your upper back off the mat, reaching the dumbbell smoothly toward the ceiling.',
+      'Lower back down vertebra by vertebra without letting momentum pull you back up.',
+    ],
+    tip: 'Reach straight up rather than forward toward your knees to keep continuous tension on your abs.',
+  },
 ];
 
-function buildExercisesForTarget(
-  target: TargetMuscleGroup,
-  durationMin: WorkoutDurationMin,
-): Exercise[] {
-  if (target === 'upper') {
-    return cloneDefaultExercises();
-  }
-  if (target === 'lower') {
-    return structuredClone(LOWER_BODY_EXERCISES) as Exercise[];
-  }
-  if (target === 'abs') {
-    return structuredClone(ABS_EXERCISES) as Exercise[];
-  }
-
-  // Full Body: curated compound mix spanning lower, push, pull, and core
-  const upper = cloneDefaultExercises();
-  const lower = structuredClone(LOWER_BODY_EXERCISES) as Exercise[];
-  const abs = structuredClone(ABS_EXERCISES) as Exercise[];
-
-  const baseFull: Exercise[] = [
-    lower[0]!, // Dumbbell Squats
-    upper[0]!, // Dumbbell Overhead Shoulder Press
-    upper[1]!, // Bent-Over Dumbbell Rows
-    abs[1]!, // Dumbbell Russian Twists
+export function getExerciseCatalog(): Exercise[] {
+  return [
+    ...cloneDefaultExercises(),
+    ...(structuredClone(EXTRA_UPPER_EXERCISES) as Exercise[]),
+    ...(structuredClone(LOWER_BODY_EXERCISES) as Exercise[]),
+    ...(structuredClone(ABS_EXERCISES) as Exercise[]),
   ];
+}
 
-  if (durationMin === 15) {
-    return [...baseFull, upper[2]!]; // + Floor Chest Press (5 moves)
+/**
+ * Merge built-in catalog with user exercises so custom exercises and custom tag edits
+ * participate in tag-driven workout generation without duplicating IDs.
+ */
+export function buildExercisePool(userExercises: readonly Exercise[] = []): Exercise[] {
+  const byId = new Map<string, Exercise>();
+  for (const catalogItem of getExerciseCatalog()) {
+    byId.set(catalogItem.id, catalogItem);
   }
-  if (durationMin === 20) {
-    return [...baseFull, lower[1]!, upper[2]!]; // + RDL & Floor Chest Press (6 moves)
+  for (const userItem of userExercises) {
+    byId.set(userItem.id, { ...(structuredClone(userItem) as Exercise), active: true });
   }
-  return baseFull;
+  return Array.from(byId.values());
+}
+
+function shuffleArray<T>(items: readonly T[], random: () => number): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const tmp = copy[i]!;
+    copy[i] = copy[j]!;
+    copy[j] = tmp;
+  }
+  return copy;
+}
+
+/**
+ * Pick `count` varied exercises, prioritizing ones not used in `previousIds` first.
+ */
+function pickWithVariation(
+  candidates: readonly Exercise[],
+  count: number,
+  previousIds: ReadonlySet<string>,
+  random: () => number,
+): Exercise[] {
+  const fresh = shuffleArray(
+    candidates.filter((ex) => !previousIds.has(ex.id)),
+    random,
+  );
+  const repeated = shuffleArray(
+    candidates.filter((ex) => previousIds.has(ex.id)),
+    random,
+  );
+  return [...fresh, ...repeated].slice(0, count);
+}
+
+function selectFullBodyExercises(
+  durationCandidates: readonly Exercise[],
+  count: number,
+  previousIds: ReadonlySet<string>,
+  random: () => number,
+): Exercise[] {
+  const chosen: Exercise[] = [];
+  const chosenIds = new Set<string>();
+
+  const pickOneForTag = (tag: MuscleGroupTag): void => {
+    const pool = durationCandidates.filter(
+      (ex) => !chosenIds.has(ex.id) && ex.muscleGroups.includes(tag),
+    );
+    const picked = pickWithVariation(pool, 1, previousIds, random)[0];
+    if (picked) {
+      chosen.push(picked);
+      chosenIds.add(picked.id);
+    }
+  };
+
+  // Guarantee balanced Full Body coverage: at least one lower, upper, and abs move.
+  pickOneForTag('lower');
+  pickOneForTag('upper');
+  pickOneForTag('abs');
+
+  // Fill remaining slots with varied picks across all muscle groups.
+  const remainingPool = durationCandidates.filter((ex) => !chosenIds.has(ex.id));
+  const extras = pickWithVariation(
+    remainingPool,
+    Math.max(0, count - chosen.length),
+    previousIds,
+    random,
+  );
+  return [...chosen, ...extras];
+}
+
+export interface GenerateWorkoutOptions {
+  durationMin: WorkoutDurationMin;
+  target: TargetMuscleGroup;
+  currentSettings: WorkoutSettings;
+  userExercises?: readonly Exercise[];
+  previousExerciseIds?: readonly string[];
+  random?: () => number;
 }
 
 export interface GeneratedWorkoutPreset {
@@ -235,34 +429,72 @@ export interface GeneratedWorkoutPreset {
   exercises: Exercise[];
   settings: WorkoutSettings;
   estimatedDurationSec: number;
+  matchingPoolSize: number;
 }
 
-export function generateWorkoutPreset(
-  durationMin: WorkoutDurationMin,
-  target: TargetMuscleGroup,
-  currentSettings: WorkoutSettings,
-): GeneratedWorkoutPreset {
-  const exercises = buildExercisesForTarget(target, durationMin);
+export function generateWorkoutPreset(options: GenerateWorkoutOptions): GeneratedWorkoutPreset {
+  const {
+    durationMin,
+    target,
+    currentSettings,
+    userExercises = [],
+    previousExerciseIds = [],
+    random = Math.random,
+  } = options;
+
+  const fullPool = buildExercisePool(userExercises);
+  const durationTagged = fullPool.filter((ex) => ex.durations.includes(durationMin));
+  const durationPool = durationTagged.length >= 4 ? durationTagged : fullPool;
+
+  const previousSet = new Set(previousExerciseIds);
   const targetMeta =
     TARGET_MUSCLE_GROUP_OPTIONS.find((opt) => opt.id === target) ?? TARGET_MUSCLE_GROUP_OPTIONS[0]!;
 
-  // Calibrated intervals (including 2 min warm-up + 1 min cool-down):
+  // Desired exercise counts & calibrated intervals (including 2 min warm-up + 1 min cool-down):
   // - 10 min: 4 exercises x 2 rounds (35s/20s) = 10:00
   // - 15 min: 4 exercises x 3 rounds (40s/20s) = 14:40 | full-body 5 exercises x 3 rounds (35s/15s) = 15:15
-  // - 20 min: 4 exercises x 4 rounds (45s/20s) = 20:00 | full-body 6 exercises x 3 rounds (40s/15s) = 19:15
+  // - 20 min: 5 exercises x 4 rounds (35s/15s) = 19:25 | full-body 6 exercises x 3 rounds (40s/15s) = 19:15
+  const desiredCount =
+    target === 'full'
+      ? durationMin === 10
+        ? 4
+        : durationMin === 15
+          ? 5
+          : 6
+      : durationMin === 20
+        ? 5
+        : 4;
+
+  let matchingPool: Exercise[];
+  let selected: Exercise[];
+
+  if (target === 'full') {
+    matchingPool = durationPool;
+    selected = selectFullBodyExercises(durationPool, desiredCount, previousSet, random);
+  } else {
+    matchingPool = durationPool.filter((ex) => ex.muscleGroups.includes(target));
+    const fallbackPool =
+      matchingPool.length > 0
+        ? matchingPool
+        : fullPool.filter((ex) => ex.muscleGroups.includes(target));
+    selected = pickWithVariation(fallbackPool, desiredCount, previousSet, random);
+  }
+
   let timing: Pick<WorkoutSettings, 'workSec' | 'restSec' | 'rounds'>;
   if (durationMin === 10) {
     timing = { workSec: 35, restSec: 20, rounds: 2 };
   } else if (durationMin === 15) {
     timing =
-      target === 'full'
+      selected.length >= 5
         ? { workSec: 35, restSec: 15, rounds: 3 }
         : { workSec: 40, restSec: 20, rounds: 3 };
   } else {
     timing =
-      target === 'full'
+      selected.length >= 6
         ? { workSec: 40, restSec: 15, rounds: 3 }
-        : { workSec: 45, restSec: 20, rounds: 4 };
+        : selected.length === 5
+          ? { workSec: 35, restSec: 15, rounds: 4 }
+          : { workSec: 45, restSec: 20, rounds: 4 };
   }
 
   const settings: WorkoutSettings = {
@@ -272,15 +504,16 @@ export function generateWorkoutPreset(
     includeCooldown: true,
   };
 
-  const timeline = buildCircuitTimeline(exercises, settings);
+  const timeline = buildCircuitTimeline(selected, settings);
   const estimatedDurationSec = computeTotalDuration(timeline);
 
   return {
     routineName: `${durationMin} min • ${targetMeta.label}`,
     durationMin,
     target,
-    exercises,
+    exercises: selected,
     settings,
     estimatedDurationSec,
+    matchingPoolSize: matchingPool.length,
   };
 }
