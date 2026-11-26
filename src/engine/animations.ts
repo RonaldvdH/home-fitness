@@ -15,6 +15,8 @@ export interface ArmPose {
   elbow: Point2D;
   hand: Point2D;
   dumbbellAngleDeg: number;
+  /** Optional horizontal foreshortening (0.25..1) to depict wrist supination/pronation. */
+  dumbbellScaleX?: number;
 }
 
 export interface AthletePose {
@@ -46,6 +48,25 @@ export interface AnimationDefinition {
  */
 export function lerp(a: number, b: number, p: number): number {
   return a + (b - a) * p;
+}
+
+/**
+ * Smooth Hermite interpolation clamped to [0, 1] over [edge0, edge1].
+ */
+export function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Evaluate a 2D quadratic Bezier curve matching SVG `M p0 Q ctrl p1`.
+ */
+export function quadBezier(p0: Point2D, ctrl: Point2D, p1: Point2D, t: number): Point2D {
+  const inv = 1 - t;
+  return {
+    x: inv * inv * p0.x + 2 * inv * t * ctrl.x + t * t * p1.x,
+    y: inv * inv * p0.y + 2 * inv * t * ctrl.y + t * t * p1.y,
+  };
 }
 
 /**
@@ -213,23 +234,33 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     id: 'bicep-curl',
     label: 'Standing Bicep Curl',
     view: 'front',
-    cues: ['Curl Up', 'Peak Squeeze', 'Controlled Lower', 'Full Extension'],
+    cues: ['Curl & Rotate', 'Palms-Up Squeeze', 'Lower & Reset Grip', 'Neutral Hang'],
     computePose(p) {
+      // Hand follows the exact quadratic Bezier curve shown by motionGuidePath.
+      const leftHand = quadBezier({ x: 128, y: 174 }, { x: 118, y: 134 }, { x: 126, y: 94 }, p);
+      const rightHand = quadBezier({ x: 192, y: 174 }, { x: 202, y: 134 }, { x: 194, y: 94 }, p);
+
+      // Start neutral (dumbbells end-on beside thighs) and supinate halfway through the lift.
+      const supination = smoothstep(0.25, 0.8, p);
+      const dumbbellScaleX = lerp(0.28, 1, supination);
+
       return {
         ...STANDING_BASE,
         leftArm: {
           shoulder: { x: 140, y: 94 },
-          elbow: { x: lerp(134, 132, p), y: lerp(134, 130, p) },
-          hand: { x: lerp(130, 138, p), y: lerp(174, 96, p) },
-          dumbbellAngleDeg: lerp(8, -12, p),
+          elbow: { x: lerp(134, 133, p), y: lerp(134, 132, p) },
+          hand: leftHand,
+          dumbbellAngleDeg: lerp(6, -10, supination),
+          dumbbellScaleX,
         },
         rightArm: {
           shoulder: { x: 180, y: 94 },
-          elbow: { x: lerp(186, 188, p), y: lerp(134, 130, p) },
-          hand: { x: lerp(190, 182, p), y: lerp(174, 96, p) },
-          dumbbellAngleDeg: lerp(-8, 12, p),
+          elbow: { x: lerp(186, 187, p), y: lerp(134, 132, p) },
+          hand: rightHand,
+          dumbbellAngleDeg: lerp(-6, 10, supination),
+          dumbbellScaleX,
         },
-        motionGuidePath: 'M 130 174 A 40 40 0 0 1 138 96 M 190 174 A 40 40 0 0 0 182 96',
+        motionGuidePath: 'M 128 174 Q 118 134 126 94 M 192 174 Q 202 134 194 94',
       };
     },
   },
@@ -257,7 +288,7 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
           hand: { x: 180 + Math.cos(angleR + 0.08) * 74, y: 94 + Math.sin(angleR + 0.08) * 74 },
           dumbbellAngleDeg: lerp(-80, 0, p),
         },
-        motionGuidePath: 'M 126 166 A 74 74 0 0 1 66 90 M 194 166 A 74 74 0 0 0 254 90',
+        motionGuidePath: 'M 132 168 A 74 74 0 0 1 66 95 M 188 168 A 74 74 0 0 0 254 95',
       };
     },
   },
@@ -298,7 +329,7 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
           hand: { x: 160 + Math.cos(angle - 0.06) * 74, y: 96 + Math.sin(angle - 0.06) * 74 },
           dumbbellAngleDeg: lerp(90, 0, p),
         },
-        motionGuidePath: 'M 164 170 A 74 74 0 0 0 234 92',
+        motionGuidePath: 'M 169 169 A 74 74 0 0 0 234 92',
       };
     },
   },
