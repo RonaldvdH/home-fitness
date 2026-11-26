@@ -49,7 +49,7 @@ export function ModalDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        class={`bg-slate-900 border border-slate-800 rounded-3xl ${maxWidthClass} w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto`}
+        class={`bg-slate-900 border border-slate-800 rounded-3xl ${maxWidthClass} w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto`}
       >
         <div class="flex items-center justify-between mb-4">
           <h3 id={titleId} class="text-lg font-bold text-white">

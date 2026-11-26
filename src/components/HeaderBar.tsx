@@ -92,13 +92,13 @@ export function HeaderBar({
         : 'Resume';
 
   return (
-    <header class="sticky top-0 z-30 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
-      <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+    <header class="sticky top-0 z-30 w-full bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5">
         {/* Left: App Brand & Local Storage Indicator */}
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
+          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
             <svg
-              class="w-5 h-5 text-slate-950"
+              class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -110,19 +110,20 @@ export function HeaderBar({
               <path d="M6.5 6.5h11M6.5 17.5h11M3 10v4M21 10v4M6.5 4v16M17.5 4v16" />
             </svg>
           </div>
-          <div class="leading-tight">
-            <div class="flex items-center gap-2">
-              <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">
+          <div class="leading-tight min-w-0">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <h1 class="font-bold text-sm sm:text-base tracking-tight text-white truncate">
                 Circuit Studio
               </h1>
               <button
                 type="button"
                 onClick={onOpenHistory}
-                title="View workout history and local storage details"
-                class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition"
+                title="Offline Ready — view workout history and local storage details"
+                aria-label="Offline ready, open workout history"
+                class="inline-flex items-center gap-1.5 px-1.5 sm:px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 transition shrink-0"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-                <span>Offline Ready</span>
+                <span class="hidden sm:inline">Offline Ready</span>
               </button>
             </div>
             <p class="text-[11px] text-slate-400 hidden sm:block">
@@ -131,56 +132,60 @@ export function HeaderBar({
           </div>
         </div>
 
-        {/* Center: Mobile-Friendly Timer & Transport Pill */}
-        <div class="flex items-center gap-2 sm:gap-3 px-3 py-1.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-inner order-3 lg:order-2 w-full lg:w-auto justify-between lg:justify-center">
-          <div class="flex items-center gap-2">
-            <span
-              data-testid="phase-badge"
-              class={`px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider border ${phaseStyle.badge}`}
-            >
-              {phaseStyle.label}
-            </span>
-            <span class="text-xs font-medium text-slate-400 hidden sm:inline">
-              {currentStep.round === 0
-                ? 'Prep'
-                : `Round ${currentStep.round}/${currentStep.totalRounds}`}
-            </span>
+        {/* Center: Responsive Timer & Transport Pill (2-row stacked on narrow phones, 1-row on sm+) */}
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-inner order-3 lg:order-2 w-full lg:w-auto sm:justify-between lg:justify-center min-w-0">
+          {/* Status + Digital Clock Row */}
+          <div class="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
+            <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <span
+                data-testid="phase-badge"
+                class={`px-2 sm:px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider border shrink-0 ${phaseStyle.badge}`}
+              >
+                {phaseStyle.label}
+              </span>
+              <span class="text-xs font-medium text-slate-400 truncate">
+                {currentStep.round === 0
+                  ? 'Prep'
+                  : `Round ${currentStep.round}/${currentStep.totalRounds}`}
+              </span>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <svg class="w-5 h-5 -rotate-90 shrink-0" viewBox="0 0 36 36" aria-hidden="true">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" stroke-width="4" />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke={phaseStyle.stroke}
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-dasharray={String(RING_CIRCUMFERENCE)}
+                  stroke-dashoffset={strokeDashoffset.toFixed(2)}
+                  class="transition-all duration-150"
+                />
+              </svg>
+              <span
+                data-testid="timer-display"
+                class="font-mono text-xl sm:text-2xl font-bold tracking-tight text-white tabular-nums"
+              >
+                {formatMMSS(timer.remainingSec)}
+              </span>
+              <span data-testid="step-counter" class="text-[11px] font-mono text-slate-500">
+                {timer.currentIndex + 1}/{totalSteps}
+              </span>
+            </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5 -rotate-90 shrink-0" viewBox="0 0 36 36" aria-hidden="true">
-              <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" stroke-width="4" />
-              <circle
-                cx="18"
-                cy="18"
-                r="14"
-                fill="none"
-                stroke={phaseStyle.stroke}
-                stroke-width="4"
-                stroke-linecap="round"
-                stroke-dasharray={String(RING_CIRCUMFERENCE)}
-                stroke-dashoffset={strokeDashoffset.toFixed(2)}
-                class="transition-all duration-150"
-              />
-            </svg>
-            <span
-              data-testid="timer-display"
-              class="font-mono text-xl sm:text-2xl font-bold tracking-tight text-white tabular-nums"
-            >
-              {formatMMSS(timer.remainingSec)}
-            </span>
-            <span data-testid="step-counter" class="text-[11px] font-mono text-slate-500">
-              {timer.currentIndex + 1}/{totalSteps}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-1">
+          {/* Transport Controls Row */}
+          <div class="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-1">
             <button
               type="button"
               onClick={onPrev}
               aria-label="Previous step"
               title="Previous Step (Left Arrow)"
-              class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-95"
+              class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-white transition active:scale-95 shrink-0"
             >
               <svg
                 class="w-4 h-4"
@@ -199,7 +204,7 @@ export function HeaderBar({
               type="button"
               onClick={onToggleStartPause}
               title="Start / Pause (Space)"
-              class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-500/20 transition active:scale-95"
+              class="flex-1 sm:flex-none justify-center px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-500/20 transition active:scale-95"
             >
               {isRunning ? (
                 <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
@@ -220,7 +225,7 @@ export function HeaderBar({
               disabled={isAtLastStep}
               aria-label="Next step"
               title="Next Step (Right Arrow)"
-              class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+              class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-white transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none shrink-0"
             >
               <svg
                 class="w-4 h-4"
@@ -240,7 +245,7 @@ export function HeaderBar({
               onClick={onReset}
               aria-label="Reset circuit"
               title="Reset Circuit"
-              class="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition active:scale-95"
+              class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-rose-400 transition active:scale-95 shrink-0"
             >
               <svg
                 class="w-4 h-4"
@@ -258,7 +263,7 @@ export function HeaderBar({
         </div>
 
         {/* Right: Audio, Voice, Settings, History */}
-        <div class="flex items-center gap-1.5 sm:gap-2 order-2 lg:order-3">
+        <div class="flex items-center gap-1 sm:gap-2 order-2 lg:order-3 shrink-0">
           <span class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-medium bg-slate-900 border border-slate-800 text-slate-300">
             {formatMMSS(totalDurationSec)} Total
           </span>
@@ -347,7 +352,8 @@ export function HeaderBar({
           <button
             type="button"
             onClick={onOpenHistory}
-            class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
+            aria-label="Open workout history"
+            class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
           >
             <svg
               class="w-4 h-4 text-emerald-400"

@@ -261,17 +261,20 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
 
   return (
     <>
-      <div class="absolute top-3.5 left-4 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping" aria-hidden="true" />
-        <span class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-          60 FPS Form Loop
+      <div class="absolute top-3 left-3 sm:top-3.5 sm:left-4 flex items-center gap-1.5 sm:gap-2">
+        <span
+          class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"
+          aria-hidden="true"
+        />
+        <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider sm:tracking-widest text-slate-400">
+          60 FPS Guide
         </span>
       </div>
 
       <div
         ref={cueRef}
         data-testid="live-rep-cue"
-        class="absolute top-3.5 right-4 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono font-semibold text-emerald-300"
+        class="absolute top-2.5 right-3 sm:top-3.5 sm:right-4 max-w-[52%] truncate px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-mono font-semibold text-emerald-300"
       >
         Controlled Tempo
       </div>
