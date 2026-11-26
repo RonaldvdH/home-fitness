@@ -7,6 +7,7 @@ import {
 import { AthleteSvg } from './AthleteSvg';
 
 export interface WorkoutStageProps {
+  routineName: string;
   currentStep: TimelineStep;
   nextStep: TimelineStep | null;
   previewExercise: Exercise | null;
@@ -14,6 +15,7 @@ export interface WorkoutStageProps {
   demoSpeed: number;
   onSetDemoSpeed: (speed: number) => void;
   onClearPreview: () => void;
+  onOpenNewWorkout: () => void;
 }
 
 const STAGE_SPOTLIGHT_MAP: Record<TimelinePhase, string> = {
@@ -24,6 +26,7 @@ const STAGE_SPOTLIGHT_MAP: Record<TimelinePhase, string> = {
 };
 
 export function WorkoutStage({
+  routineName,
   currentStep,
   nextStep,
   previewExercise,
@@ -31,6 +34,7 @@ export function WorkoutStage({
   demoSpeed,
   onSetDemoSpeed,
   onClearPreview,
+  onOpenNewWorkout,
 }: WorkoutStageProps) {
   const isPreview = previewExercise !== null;
   const activeExercise = previewExercise ?? currentStep.exercise;
@@ -46,6 +50,49 @@ export function WorkoutStage({
   return (
     <section class="lg:col-span-8 min-w-0 flex flex-col gap-4">
       <div class="rounded-3xl bg-slate-900 border border-slate-800/90 overflow-hidden shadow-2xl">
+        {/* Active Routine Quick-Setup Strip */}
+        <div class="px-4 sm:px-7 py-2.5 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+          <span
+            data-testid="active-routine-name"
+            class="font-semibold text-slate-300 truncate min-w-0"
+          >
+            {routineName}
+          </span>
+          <button
+            type="button"
+            onClick={onOpenNewWorkout}
+            class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shrink-0 transition active:scale-95"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              aria-hidden="true"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            <span>New Workout</span>
+          </button>
+        </div>
+
+        {/* Workout Completed Banner */}
+        {isCompleted && !isPreview && (
+          <div class="px-4 sm:px-7 py-2.5 bg-emerald-950/60 border-b border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-semibold text-emerald-200">
+              Workout complete! Ready to switch it up?
+            </span>
+            <button
+              type="button"
+              onClick={onOpenNewWorkout}
+              class="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold shrink-0 transition"
+            >
+              Start Another
+            </button>
+          </div>
+        )}
+
         {/* Non-destructive Preview Banner */}
         {isPreview && (
           <div class="px-4 sm:px-7 py-2.5 bg-purple-950/60 border-b border-purple-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">

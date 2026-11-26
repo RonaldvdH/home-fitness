@@ -93,4 +93,33 @@ describe('<App /> integration flows', () => {
 
     store.destroy();
   });
+
+  it('builds and starts a 10 min Abs & Core workout from the New Workout overlay', () => {
+    const store = createWorkoutStore({ storage: createMemoryAdapter() });
+    render(<App store={store} />);
+
+    fireEvent.click(screen.getByText('New Workout'));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('10 min'));
+    fireEvent.click(screen.getByText('Abs & Core'));
+
+    const preview = screen.getByTestId('new-workout-preview');
+    expect(preview.textContent).toContain('10:00 total');
+    expect(preview.textContent).toContain('Dumbbell Russian Twists');
+
+    fireEvent.click(screen.getByText('Start Workout'));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByTestId('active-routine-name').textContent).toBe('10 min • Abs & Core');
+    expect(store.getState().timer.status).toBe('running');
+    expect(store.getState().activeRoutine.exercises.map((e) => e.animationType)).toEqual([
+      'crunch',
+      'russian-twist',
+      'leg-raise',
+      'plank-tap',
+    ]);
+
+    store.destroy();
+  });
 });

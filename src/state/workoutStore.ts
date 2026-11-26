@@ -6,6 +6,11 @@
 
 import { cloneDefaultExercises } from '../domain/defaults';
 import {
+  generateWorkoutPreset,
+  type TargetMuscleGroup,
+  type WorkoutDurationMin,
+} from '../domain/presets';
+import {
   MAX_HISTORY_RECORDS,
   normalizeEquipment,
   type AnimationId,
@@ -89,6 +94,11 @@ export interface WorkoutStore {
   toggleExerciseActive: (exerciseId: string) => void;
   deleteExercise: (exerciseId: string) => void;
   restoreDefaultExercises: () => void;
+  applyWorkoutPreset: (
+    durationMin: WorkoutDurationMin,
+    target: TargetMuscleGroup,
+    options?: { autoStart?: boolean },
+  ) => void;
   updateSettings: (next: Partial<WorkoutSettings>) => void;
   toggleSound: () => void;
   toggleVoice: () => void;
@@ -430,6 +440,26 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
         exercises: cloneDefaultExercises(),
       }));
       pushToast('Default dumbbell exercises restored.');
+    },
+
+    applyWorkoutPreset(
+      durationMin: WorkoutDurationMin,
+      target: TargetMuscleGroup,
+      options?: { autoStart?: boolean },
+    ) {
+      const preset = generateWorkoutPreset(durationMin, target, activeRoutine.settings);
+      updateActiveRoutine((routine) => ({
+        ...routine,
+        name: preset.routineName,
+        exercises: preset.exercises,
+        settings: preset.settings,
+      }));
+      if (options?.autoStart) {
+        this.start();
+        pushToast(`Started ${preset.routineName}!`, 'success');
+      } else {
+        pushToast(`Loaded ${preset.routineName}.`, 'success');
+      }
     },
 
     updateSettings(next: Partial<WorkoutSettings>) {

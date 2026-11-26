@@ -15,6 +15,12 @@ export const ANIMATION_IDS = [
   'tricep-extension',
   'squat',
   'rdl',
+  'reverse-lunge',
+  'glute-bridge',
+  'crunch',
+  'leg-raise',
+  'russian-twist',
+  'plank-tap',
 ] as const;
 
 export type AnimationId = (typeof ANIMATION_IDS)[number];
