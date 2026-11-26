@@ -44,11 +44,11 @@ export function WorkoutStage({
   const weightLabel = formatDumbbellWeight(activeExercise.equipment);
 
   return (
-    <section class="lg:col-span-8 flex flex-col gap-4">
+    <section class="lg:col-span-8 min-w-0 flex flex-col gap-4">
       <div class="rounded-3xl bg-slate-900 border border-slate-800/90 overflow-hidden shadow-2xl">
         {/* Non-destructive Preview Banner */}
         {isPreview && (
-          <div class="px-5 sm:px-7 py-2.5 bg-purple-950/60 border-b border-purple-500/30 flex items-center justify-between gap-3 text-xs">
+          <div class="px-4 sm:px-7 py-2.5 bg-purple-950/60 border-b border-purple-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
             <span class="font-semibold text-purple-200">
               Previewing exercise — your workout progress is preserved.
             </span>
@@ -63,25 +63,25 @@ export function WorkoutStage({
         )}
 
         {/* Top Exercise Header Bar */}
-        <div class="px-5 sm:px-7 py-4 sm:py-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2 mb-1">
-              <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <div class="px-4 sm:px-7 py-3.5 sm:py-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 {activeExercise.equipment.label}
               </span>
               <span class="text-xs font-medium text-slate-400">{activeExercise.muscleGroup}</span>
             </div>
             <h2
               data-testid="active-exercise-title"
-              class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight"
+              class="text-lg sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight break-words"
             >
               {activeExercise.name}
             </h2>
           </div>
 
           {/* Animation Tempo Control Pill */}
-          <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <span class="px-2 text-slate-500 font-medium">Demo Pace:</span>
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
+            <span class="px-1.5 sm:px-2 text-slate-500 font-medium">Pace:</span>
             <button
               type="button"
               onClick={() => onSetDemoSpeed(0.65)}
@@ -112,7 +112,7 @@ export function WorkoutStage({
         {/* Centerpiece Split: Left = 60fps SVG Stage | Right = Coaching Cues */}
         <div class="grid grid-cols-1 md:grid-cols-12">
           <div
-            class={`md:col-span-7 ${spotlightClass} relative flex flex-col items-center justify-center p-5 sm:p-8 min-h-[290px] sm:min-h-[380px] border-b md:border-b-0 md:border-r border-slate-800/80`}
+            class={`md:col-span-7 min-w-0 ${spotlightClass} relative flex flex-col items-center justify-center p-4 pt-12 sm:p-8 min-h-[260px] sm:min-h-[380px] border-b md:border-b-0 md:border-r border-slate-800/80`}
           >
             <AthleteSvg
               animationType={activeExercise.animationType}
@@ -121,7 +121,7 @@ export function WorkoutStage({
             />
           </div>
 
-          <div class="md:col-span-5 p-5 sm:p-6 flex flex-col justify-between bg-slate-900/40">
+          <div class="md:col-span-5 min-w-0 p-4 sm:p-6 flex flex-col justify-between bg-slate-900/40">
             <div>
               <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3 flex items-center gap-1.5">
                 <svg

@@ -28,17 +28,17 @@ export function RoutineSidebar({
   onRestoreDefaults,
 }: RoutineSidebarProps) {
   return (
-    <aside class="lg:col-span-4 flex flex-col gap-4">
-      <div class="rounded-3xl bg-slate-900 border border-slate-800/90 p-5 shadow-xl flex flex-col">
-        <div class="flex items-center justify-between gap-2 mb-3.5">
-          <div>
+    <aside class="lg:col-span-4 min-w-0 flex flex-col gap-4">
+      <div class="rounded-3xl bg-slate-900 border border-slate-800/90 p-4 sm:p-5 shadow-xl flex flex-col min-w-0">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+          <div class="min-w-0">
             <h3 class="text-base font-bold text-white">Your Circuit Routine</h3>
             <p class="text-xs text-slate-400">Tap any move to preview • Auto-saved</p>
           </div>
           <button
             type="button"
             onClick={onAddExercise}
-            class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-500/20 transition active:scale-95"
+            class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-md shadow-emerald-500/20 transition active:scale-95 shrink-0"
           >
             <svg
               class="w-4 h-4"
@@ -55,7 +55,7 @@ export function RoutineSidebar({
           </button>
         </div>
 
-        <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+        <div class="space-y-2.5 max-h-[460px] overflow-y-auto pr-0.5 sm:pr-1">
           {exercises.map((ex, idx) => {
             const isHighlighted = highlightedExerciseId === ex.id;
             return (
@@ -69,14 +69,16 @@ export function RoutineSidebar({
                       : 'bg-slate-950/30 border-slate-800/50 opacity-55'
                 }`}
               >
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => onPreviewExercise(ex.id)}
                     class="min-w-0 flex-1 text-left focus:outline-none"
                   >
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs font-mono font-bold text-slate-500">{idx + 1}.</span>
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="text-xs font-mono font-bold text-slate-500 shrink-0">
+                        {idx + 1}.
+                      </span>
                       <h4 class="font-bold text-sm text-white truncate group-hover:text-emerald-300 transition">
                         {ex.name}
                       </h4>
@@ -84,7 +86,7 @@ export function RoutineSidebar({
                     <p class="text-xs text-slate-400 truncate pl-5 mt-0.5">{ex.muscleGroup}</p>
                   </button>
 
-                  <div class="flex items-center gap-0.5 shrink-0">
+                  <div class="flex items-center justify-end gap-1 sm:gap-0.5 shrink-0 pl-5 sm:pl-0">
                     <button
                       type="button"
                       onClick={() => onMoveExercise(idx, -1)}
@@ -192,7 +194,7 @@ export function RoutineSidebar({
         </div>
 
         {/* Backup / Restore Footer */}
-        <div class="mt-4 pt-3.5 border-t border-slate-800 flex items-center justify-between gap-2 text-xs">
+        <div class="mt-4 pt-3.5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-1.5">
             <button
               type="button"
