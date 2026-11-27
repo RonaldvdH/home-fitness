@@ -114,13 +114,17 @@ Keep modules strictly organized by responsibility:
 │       ├── RoutineSidebar.tsx  # Exercise list controls (preview, reorder, toggle, edit, delete, backup)
 │       ├── ToastHost.tsx       # Accessible live-region toast notifications
 │       ├── ui/
-│       │   └── dialog.tsx      # shadcn + Base UI Dialog primitive (@base-ui/react/dialog)
+│       │   ├── dialog.tsx          # shadcn + Base UI Dialog primitive (@base-ui/react/dialog)
+│       │   ├── switch.tsx          # shadcn + Base UI Switch primitive (@base-ui/react/switch)
+│       │   └── tabs.tsx            # shadcn + Base UI Tabs primitive (@base-ui/react/tabs)
+│       ├── settings/
+│       │   └── SpacesPanel.tsx     # Workout Spaces list & Add/Edit form for Settings -> Spaces tab
 │       └── modals/
-│           ├── ModalDialog.tsx     # Shared modal shell composing @/components/ui/dialog
-│           ├── NewWorkoutModal.tsx # 1-screen Space + duration + muscle group builder with Shuffle
-│           ├── SpacesModal.tsx     # Add/Edit/Delete Workout Spaces & dumbbell weights
-│           ├── ExerciseModal.tsx   # Add/Edit exercise with animation, equipment & tag chips
-│           ├── SettingsModal.tsx
+│           ├── ModalDialog.tsx          # Shared modal shell composing @/components/ui/dialog
+│           ├── NewWorkoutModal.tsx      # 1-screen Space + duration + muscle group builder with Shuffle
+│           ├── ExerciseLibraryModal.tsx # Searchable, filterable All Exercises browser with live 60 FPS preview
+│           ├── ExerciseModal.tsx        # Add/Edit exercise with animation, equipment & tag chips
+│           ├── SettingsModal.tsx        # Unified tabbed Settings (Timer & Audio, Spaces, Data & Backup)
 │           └── HistoryModal.tsx
 └── tests/
     ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync

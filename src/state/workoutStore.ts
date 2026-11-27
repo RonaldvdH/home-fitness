@@ -7,6 +7,7 @@
 import { cloneDefaultExercises } from '../domain/defaults';
 import type { GeneratedWorkoutPreset } from '../domain/presets';
 import {
+  applySpaceToExercise,
   MAX_HISTORY_RECORDS,
   normalizeDurationTags,
   normalizeEquipment,
@@ -82,6 +83,7 @@ export interface WorkoutStoreState {
   totalDurationSec: number;
   timer: TimerSnapshot;
   previewExerciseId: string | null;
+  previewExerciseItem: Exercise | null;
   toasts: ToastItem[];
   voiceSupported: boolean;
 }
@@ -106,7 +108,9 @@ export interface WorkoutStore {
   stepForward: () => void;
   stepBackward: () => void;
   previewExercise: (exerciseId: string) => void;
+  previewCatalogExercise: (exercise: Exercise) => void;
   clearPreview: () => void;
+  addCatalogExercise: (exercise: Exercise) => void;
   saveExercise: (input: ExerciseFormInput) => void;
   moveExercise: (index: number, delta: -1 | 1) => void;
   toggleExerciseActive: (exerciseId: string) => void;
@@ -151,6 +155,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
   let timeline = buildCircuitTimeline(activeRoutine.exercises, activeRoutine.settings);
   let totalDurationSec = computeTotalDuration(timeline);
   let previewExerciseId: string | null = null;
+  let previewExerciseItem: Exercise | null = null;
   let toasts: ToastItem[] = [];
   let nextToastId = 1;
   const toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
@@ -167,6 +172,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       totalDurationSec,
       timer: timerSnap,
       previewExerciseId,
+      previewExerciseItem,
       toasts,
       voiceSupported: voice.isSupported(),
     };
@@ -277,6 +283,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       timeline = buildCircuitTimeline(activeRoutine.exercises, activeRoutine.settings);
       totalDurationSec = computeTotalDuration(timeline);
       previewExerciseId = null;
+      previewExerciseItem = null;
       voice.cancel();
       void wakeLock.release();
       timer.setTimeline(timeline, { preserveProgress: false });
@@ -312,6 +319,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
 
     start() {
       previewExerciseId = null;
+      previewExerciseItem = null;
       audio.unlock();
       void wakeLock.acquire();
       timer.start();
@@ -333,6 +341,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
 
     reset() {
       previewExerciseId = null;
+      previewExerciseItem = null;
       voice.cancel();
       void wakeLock.release();
       timer.reset();
@@ -340,33 +349,68 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
 
     stepForward() {
       previewExerciseId = null;
+      previewExerciseItem = null;
       voice.cancel();
       timer.stepForward();
     },
 
     stepBackward() {
       previewExerciseId = null;
+      previewExerciseItem = null;
       voice.cancel();
       timer.stepBackward();
     },
 
     previewExercise(exerciseId: string) {
-      const exists = activeRoutine.exercises.some((ex) => ex.id === exerciseId);
-      if (!exists) return;
+      const target = activeRoutine.exercises.find((ex) => ex.id === exerciseId);
+      if (!target) return;
       if (timer.getSnapshot().status === 'running') {
         voice.cancel();
         void wakeLock.release();
         timer.pause();
       }
       previewExerciseId = exerciseId;
+      previewExerciseItem = target;
+      notify();
+    },
+
+    previewCatalogExercise(exercise: Exercise) {
+      if (timer.getSnapshot().status === 'running') {
+        voice.cancel();
+        void wakeLock.release();
+        timer.pause();
+      }
+      const adapted = applySpaceToExercise(exercise, activeSpace);
+      previewExerciseId = adapted.id;
+      previewExerciseItem = adapted;
       notify();
     },
 
     clearPreview() {
-      if (previewExerciseId !== null) {
+      if (previewExerciseId !== null || previewExerciseItem !== null) {
         previewExerciseId = null;
+        previewExerciseItem = null;
         notify();
       }
+    },
+
+    addCatalogExercise(exercise: Exercise) {
+      const adapted = { ...applySpaceToExercise(exercise, activeSpace), active: true };
+      const existing = activeRoutine.exercises.find((item) => item.id === adapted.id);
+      if (existing) {
+        if (!existing.active) {
+          this.toggleExerciseActive(existing.id);
+        } else {
+          pushToast(`"${adapted.name}" is already in your circuit.`);
+        }
+        return;
+      }
+
+      updateActiveRoutine((routine) => ({
+        ...routine,
+        exercises: [...routine.exercises, adapted],
+      }));
+      pushToast(`Added "${adapted.name}" to your circuit.`, 'success');
     },
 
     saveExercise(input: ExerciseFormInput) {
@@ -657,6 +701,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       timeline = buildCircuitTimeline(activeRoutine.exercises, activeRoutine.settings);
       totalDurationSec = computeTotalDuration(timeline);
       previewExerciseId = null;
+      previewExerciseItem = null;
       voice.cancel();
       void wakeLock.release();
       timer.setTimeline(timeline, { preserveProgress: false });

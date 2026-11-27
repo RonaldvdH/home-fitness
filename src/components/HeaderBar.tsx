@@ -365,8 +365,8 @@ export function HeaderBar({
           <button
             type="button"
             onClick={onOpenSettings}
-            aria-label="Open timer settings"
-            title="Timer & Audio Settings"
+            aria-label="Open settings"
+            title="Settings (Timer, Spaces & Backup)"
             class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition"
           >
             <svg

@@ -59,10 +59,14 @@ for (const vp of VIEWPORTS) {
     await expectZeroHorizontalOverflow(page, `${vp.name} New Workout modal`);
     await dismissDialogWithEscape(page);
 
-    // Check Settings modal fits cleanly
-    await page.getByLabel('Open timer settings').click();
+    // Check unified Settings modal (Timer & Audio, Spaces, Data & Backup) fits cleanly
+    await page.getByLabel('Open settings').click();
     await expect(page.getByRole('dialog')).toBeVisible();
-    await expectZeroHorizontalOverflow(page, `${vp.name} Settings modal`);
+    await expectZeroHorizontalOverflow(page, `${vp.name} Settings modal (Timer & Audio)`);
+    await page.getByRole('tab', { name: /Spaces/i }).click();
+    await expectZeroHorizontalOverflow(page, `${vp.name} Settings modal (Spaces)`);
+    await page.getByRole('tab', { name: /Data & Backup/i }).click();
+    await expectZeroHorizontalOverflow(page, `${vp.name} Settings modal (Data & Backup)`);
     await dismissDialogWithEscape(page);
 
     // Check History modal fits cleanly
@@ -247,12 +251,13 @@ test('Workout Spaces (360x800): switching to Travel excludes dumbbells & Manage 
   expect(routineSidebarText?.toLowerCase()).not.toContain('dumbbell');
   await expectZeroHorizontalOverflow(page, '360x800 Travel workout loaded');
 
-  // Open New Workout -> Manage Spaces -> create a custom 7.5kg Balcony space
+  // Open New Workout -> Manage Spaces -> opens unified Settings directly on Spaces tab -> create custom 7.5kg Balcony space
   await page.getByRole('button', { name: 'New Workout' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Manage Spaces' }).click();
-  await expect(page.getByRole('heading', { name: 'Workout Spaces' })).toBeVisible();
-  await expectZeroHorizontalOverflow(page, '360x800 SpacesModal list');
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Spaces/i })).toHaveAttribute('aria-selected', 'true');
+  await expectZeroHorizontalOverflow(page, '360x800 Settings Spaces tab');
 
   await page.getByRole('button', { name: '+ Add Workout Space' }).click();
   await page.getByLabel('Space Name *').fill('Balcony');
@@ -271,5 +276,39 @@ test('Workout Spaces (360x800): switching to Travel excludes dumbbells & Manage 
   await expectZeroHorizontalOverflow(page, '360x800 New Workout after adding Balcony');
 
   await dismissDialogWithEscape(page);
+  expect(errors).toEqual([]);
+});
+
+test('All Exercises Browser (360x800): search, filter, live 60 FPS preview, and preview on stage', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Browse All Exercises' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByTestId('library-preview-card')).toBeVisible();
+  await expectZeroHorizontalOverflow(page, '360x800 All Exercises Browser');
+
+  // Filter by Elastic Bands and select Band Pull-Aparts
+  await page.getByRole('button', { name: 'Elastic Bands' }).click();
+  await page.getByTestId('library-exercise-list').getByText('Band Pull-Aparts').click();
+  await expect(page.getByTestId('library-preview-title')).toHaveText('Band Pull-Aparts');
+
+  // Preview directly on stage without overwriting active routine
+  await page.getByRole('button', { name: 'Preview on Stage' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByTestId('active-exercise-title')).toHaveText('Band Pull-Aparts');
+  await expect(page.getByRole('button', { name: 'Back to Workout' })).toBeVisible();
+  await expectZeroHorizontalOverflow(page, '360x800 stage after library preview');
+
+  await page.getByRole('button', { name: 'Back to Workout' }).click();
+  await expect(page.getByTestId('active-exercise-title')).not.toHaveText('Band Pull-Aparts');
   expect(errors).toEqual([]);
 });

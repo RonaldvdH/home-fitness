@@ -12,12 +12,16 @@ import {
   type WorkoutStoreState,
 } from '../state/workoutStore';
 import { HeaderBar } from './HeaderBar';
+import type { SettingsTab } from './modals/SettingsModal';
 import { RoutineSidebar } from './RoutineSidebar';
 import { ToastHost } from './ToastHost';
 import { WorkoutStage } from './WorkoutStage';
 
 const FlexWorkoutView = lazy(() =>
   import('./FlexWorkoutView').then((m) => ({ default: m.FlexWorkoutView })),
+);
+const ExerciseLibraryModal = lazy(() =>
+  import('./modals/ExerciseLibraryModal').then((m) => ({ default: m.ExerciseLibraryModal })),
 );
 const ExerciseModal = lazy(() =>
   import('./modals/ExerciseModal').then((m) => ({ default: m.ExerciseModal })),
@@ -30,9 +34,6 @@ const NewWorkoutModal = lazy(() =>
 );
 const SettingsModal = lazy(() =>
   import('./modals/SettingsModal').then((m) => ({ default: m.SettingsModal })),
-);
-const SpacesModal = lazy(() =>
-  import('./modals/SpacesModal').then((m) => ({ default: m.SpacesModal })),
 );
 
 export interface AppProps {
@@ -57,16 +58,17 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
   const [floorMode, setFloorMode] = useState<FloorModeSnapshot>(() => foldable.getSnapshot());
 
   const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
-  const [spacesModalOpen, setSpacesModalOpen] = useState(false);
+  const [libraryModalOpen, setLibraryModalOpen] = useState(false);
   const [returnToNewWorkout, setReturnToNewWorkout] = useState(false);
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const anyModalOpen =
     newWorkoutModalOpen ||
-    spacesModalOpen ||
+    libraryModalOpen ||
     exerciseModalOpen ||
     settingsModalOpen ||
     historyModalOpen;
@@ -142,9 +144,11 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
   const currentStep = state.timeline[state.timer.currentIndex] ?? state.timeline[0]!;
   const nextStep = state.timeline[state.timer.currentIndex + 1] ?? null;
 
-  const previewExercise = state.previewExerciseId
-    ? (state.activeRoutine.exercises.find((ex) => ex.id === state.previewExerciseId) ?? null)
-    : null;
+  const previewExercise =
+    state.previewExerciseItem ??
+    (state.previewExerciseId
+      ? (state.activeRoutine.exercises.find((ex) => ex.id === state.previewExerciseId) ?? null)
+      : null);
 
   const highlightedExerciseId = previewExercise
     ? previewExercise.id
@@ -226,7 +230,11 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
             onToggleSound={() => store.toggleSound()}
             onToggleVoice={() => store.toggleVoice()}
             onToggleFloorMode={() => foldable.toggleFloorMode()}
-            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenSettings={() => {
+              setReturnToNewWorkout(false);
+              setSettingsTab('general');
+              setSettingsModalOpen(true);
+            }}
             onOpenHistory={() => setHistoryModalOpen(true)}
           />
 
@@ -250,6 +258,7 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
                 setEditingExercise(null);
                 setExerciseModalOpen(true);
               }}
+              onOpenLibrary={() => setLibraryModalOpen(true)}
               onPreviewExercise={(id) => store.previewExercise(id)}
               onMoveExercise={(index, delta) => store.moveExercise(index, delta)}
               onToggleExercise={(id) => store.toggleExerciseActive(id)}
@@ -258,9 +267,6 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
                 setExerciseModalOpen(true);
               }}
               onDeleteExercise={(id) => store.deleteExercise(id)}
-              onExportJson={handleExportJson}
-              onImportFile={handleImportFile}
-              onRestoreDefaults={() => store.restoreDefaultExercises()}
             />
           </main>
         </>
@@ -278,28 +284,24 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
             onManageSpaces={() => {
               setReturnToNewWorkout(true);
               setNewWorkoutModalOpen(false);
-              setSpacesModalOpen(true);
+              setSettingsTab('spaces');
+              setSettingsModalOpen(true);
             }}
             onClose={() => setNewWorkoutModalOpen(false)}
             onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
           />
         )}
 
-        {spacesModalOpen && (
-          <SpacesModal
-            open={spacesModalOpen}
-            spaces={state.data.spaces}
-            activeSpaceId={state.activeSpace.id}
-            onClose={() => {
-              setSpacesModalOpen(false);
-              if (returnToNewWorkout) {
-                setReturnToNewWorkout(false);
-                setNewWorkoutModalOpen(true);
-              }
-            }}
-            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
-            onSaveSpace={(input) => store.saveSpace(input)}
-            onDeleteSpace={(spaceId) => store.deleteSpace(spaceId)}
+        {libraryModalOpen && (
+          <ExerciseLibraryModal
+            open={libraryModalOpen}
+            userExercises={state.activeRoutine.exercises}
+            activeRoutineExerciseIds={state.activeRoutine.exercises.map((ex) => ex.id)}
+            activeSpace={state.activeSpace}
+            demoSpeed={state.activeRoutine.settings.demoSpeed}
+            onClose={() => setLibraryModalOpen(false)}
+            onPreviewOnStage={(exercise) => store.previewCatalogExercise(exercise)}
+            onAddToRoutine={(exercise) => store.addCatalogExercise(exercise)}
           />
         )}
 
@@ -315,12 +317,27 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
         {settingsModalOpen && (
           <SettingsModal
             open={settingsModalOpen}
+            initialTab={settingsTab}
             settings={state.activeRoutine.settings}
             voiceSupported={state.voiceSupported}
-            onClose={() => setSettingsModalOpen(false)}
+            spaces={state.data.spaces}
+            activeSpaceId={state.activeSpace.id}
+            onClose={() => {
+              setSettingsModalOpen(false);
+              if (returnToNewWorkout) {
+                setReturnToNewWorkout(false);
+                setNewWorkoutModalOpen(true);
+              }
+            }}
             onSave={(next) => store.updateSettings(next)}
             onTestBeep={() => store.testAudioBeep()}
             onTestVoice={() => store.testVoice()}
+            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
+            onSaveSpace={(input) => store.saveSpace(input)}
+            onDeleteSpace={(spaceId) => store.deleteSpace(spaceId)}
+            onExportJson={handleExportJson}
+            onImportFile={handleImportFile}
+            onRestoreDefaults={() => store.restoreDefaultExercises()}
           />
         )}
 
