@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   inferMuscleGroupTags,
   MUSCLE_GROUP_TAGS,
@@ -26,19 +26,31 @@ const MUSCLE_TAG_LABELS: Record<MuscleGroupTag, string> = {
 };
 
 export function ExerciseModal({ open, editingExercise, onClose, onSave }: ExerciseModalProps) {
-  const [name, setName] = useState('');
-  const [muscleGroup, setMuscleGroup] = useState('');
-  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupTag[]>(['upper']);
-  const [durations, setDurations] = useState<WorkoutDurationMin[]>([...WORKOUT_DURATIONS]);
-  const [equipmentLabel, setEquipmentLabel] = useState('2x 5kg Dumbbells');
-  const [animationType, setAnimationType] = useState<AnimationId>('overhead-press');
-  const [step1, setStep1] = useState('');
-  const [step2, setStep2] = useState('');
-  const [step3, setStep3] = useState('');
-  const [tip, setTip] = useState('');
+  const [name, setName] = useState(() => editingExercise?.name ?? '');
+  const [muscleGroup, setMuscleGroup] = useState(() => editingExercise?.muscleGroup ?? '');
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroupTag[]>(() =>
+    editingExercise ? [...editingExercise.muscleGroups] : ['upper'],
+  );
+  const [durations, setDurations] = useState<WorkoutDurationMin[]>(() =>
+    editingExercise ? [...editingExercise.durations] : [...WORKOUT_DURATIONS],
+  );
+  const [equipmentLabel, setEquipmentLabel] = useState(
+    () => editingExercise?.equipment.label ?? '2x 5kg Dumbbells',
+  );
+  const [animationType, setAnimationType] = useState<AnimationId>(
+    () => editingExercise?.animationType ?? 'overhead-press',
+  );
+  const [step1, setStep1] = useState(() => editingExercise?.steps[0] ?? '');
+  const [step2, setStep2] = useState(() => editingExercise?.steps[1] ?? '');
+  const [step3, setStep3] = useState(() => editingExercise?.steps[2] ?? '');
+  const [tip, setTip] = useState(() => editingExercise?.tip ?? '');
+
+  const lastSyncedRef = useRef({ open, editingExercise });
 
   useEffect(() => {
-    if (!open) return;
+    const prev = lastSyncedRef.current;
+    lastSyncedRef.current = { open, editingExercise };
+    if (!open || (prev.open === open && prev.editingExercise === editingExercise)) return;
     if (editingExercise) {
       setName(editingExercise.name);
       setMuscleGroup(editingExercise.muscleGroup);

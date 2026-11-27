@@ -87,20 +87,34 @@ describe('architecture & repo-rule guardrails', () => {
     expect(violations).toEqual([]);
   });
 
-  it('requires every modal component under src/components/modals/ to use ModalDialog', () => {
+  it('requires every modal component under src/components/modals/ to use ModalDialog backed by shadcn + Base UI Dialog', () => {
     const modalsDir = join(SRC_DIR, 'components', 'modals');
     const files = collectFiles(modalsDir, (p) => p.endsWith('.tsx'));
     const violations: string[] = [];
 
     for (const file of files) {
       const rel = relative(ROOT, file);
-      if (rel.endsWith('/ModalDialog.tsx')) continue;
       const code = stripComments(readFileSync(file, 'utf8'));
+      if (rel.endsWith('/ModalDialog.tsx')) {
+        if (!code.includes('@/components/ui/dialog')) {
+          violations.push(
+            `${rel}: must compose shadcn + Base UI Dialog from @/components/ui/dialog`,
+          );
+        }
+        continue;
+      }
       if (!code.includes('<ModalDialog')) {
         violations.push(
           `${rel}: modal must wrap content with <ModalDialog> for ARIA & Escape handling`,
         );
       }
+    }
+
+    const uiDialogCode = stripComments(
+      readFileSync(join(SRC_DIR, 'components', 'ui', 'dialog.tsx'), 'utf8'),
+    );
+    if (!uiDialogCode.includes('@base-ui/react/dialog')) {
+      violations.push('src/components/ui/dialog.tsx: must wrap @base-ui/react/dialog (ADR-0005)');
     }
 
     expect(violations).toEqual([]);

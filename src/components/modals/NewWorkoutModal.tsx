@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   generateWorkoutPreset,
   TARGET_MUSCLE_GROUP_OPTIONS,
@@ -43,16 +43,29 @@ export function NewWorkoutModal({
     }),
   );
 
-  // Re-build a fresh varied lineup whenever the overlay opens or filters change.
+  const lastSyncedRef = useRef({ open, durationMin, target, currentSettings, userExercises });
+
+  // Re-build a fresh varied lineup whenever the overlay re-opens or filters change.
   useEffect(() => {
-    if (!open) return;
-    setPreview((prev) =>
+    const prev = lastSyncedRef.current;
+    lastSyncedRef.current = { open, durationMin, target, currentSettings, userExercises };
+    if (
+      !open ||
+      (prev.open === open &&
+        prev.durationMin === durationMin &&
+        prev.target === target &&
+        prev.currentSettings === currentSettings &&
+        prev.userExercises === userExercises)
+    ) {
+      return;
+    }
+    setPreview((prevPreview) =>
       generateWorkoutPreset({
         durationMin,
         target,
         currentSettings,
         userExercises,
-        previousExerciseIds: prev.exercises.map((e) => e.id),
+        previousExerciseIds: prevPreview.exercises.map((e) => e.id),
       }),
     );
   }, [open, durationMin, target, currentSettings, userExercises]);

@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import { preact } from '@preact/preset-vite';
 import tailwindcss from '@tailwindcss/vite';
@@ -13,6 +14,11 @@ const base = resolveBasePath(process.env.VITE_BASE_PATH);
 
 export default defineConfig({
   base,
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   plugins: [
     preact(),
     tailwindcss(),

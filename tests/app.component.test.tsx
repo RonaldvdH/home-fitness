@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/preact';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/preact';
 import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../src/components/App';
 import { createDefaultAppData } from '../src/domain/defaults';
@@ -65,12 +65,16 @@ describe('<App /> integration flows', () => {
     store.destroy();
   });
 
-  it('edits an exercise while preserving equipment metadata and closes modals on Escape', () => {
+  it('edits an exercise while preserving equipment metadata and closes modals on Escape', async () => {
     const store = createWorkoutStore({ storage: createMemoryAdapter() });
     render(<App store={store} />);
 
     fireEvent.click(screen.getByLabelText('Edit Dumbbell Floor Chest Press'));
-    const nameInput = screen.getByLabelText('Exercise Name *') as HTMLInputElement;
+    const nameInput = (await screen.findByLabelText(
+      'Exercise Name *',
+      {},
+      { timeout: 5000 },
+    )) as HTMLInputElement;
     const equipInput = screen.getByLabelText('Equipment & Weight') as HTMLInputElement;
 
     expect(equipInput.value).toBe('2x 5kg Dumbbells • Floor / Mat');
@@ -84,22 +88,24 @@ describe('<App /> integration flows', () => {
 
     // Open history modal, log manual workout, then close with Escape
     fireEvent.click(screen.getByText('History'));
-    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeTruthy();
     fireEvent.click(screen.getByText('+ Log Completed Workout'));
     expect(store.getState().data.history).toHaveLength(1);
 
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
 
     store.destroy();
   });
 
-  it('builds, shuffles, and starts a tagged 10 min Abs & Core workout from the New Workout overlay', () => {
+  it('builds, shuffles, and starts a tagged 10 min Abs & Core workout from the New Workout overlay', async () => {
     const store = createWorkoutStore({ storage: createMemoryAdapter() });
     render(<App store={store} />);
 
     fireEvent.click(screen.getByText('New Workout'));
-    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeTruthy();
 
     fireEvent.click(screen.getByText('10 min'));
     fireEvent.click(screen.getByText('Abs & Core'));
@@ -113,7 +119,9 @@ describe('<App /> integration flows', () => {
 
     fireEvent.click(screen.getByText('Start Workout'));
 
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
     expect(screen.getByTestId('active-routine-name').textContent).toBe('10 min • Abs & Core');
     expect(store.getState().timer.status).toBe('running');
 

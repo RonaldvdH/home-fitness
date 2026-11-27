@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { Exercise } from '../domain/schema';
 import {
@@ -9,10 +10,19 @@ import { HeaderBar } from './HeaderBar';
 import { RoutineSidebar } from './RoutineSidebar';
 import { ToastHost } from './ToastHost';
 import { WorkoutStage } from './WorkoutStage';
-import { ExerciseModal } from './modals/ExerciseModal';
-import { HistoryModal } from './modals/HistoryModal';
-import { NewWorkoutModal } from './modals/NewWorkoutModal';
-import { SettingsModal } from './modals/SettingsModal';
+
+const ExerciseModal = lazy(() =>
+  import('./modals/ExerciseModal').then((m) => ({ default: m.ExerciseModal })),
+);
+const HistoryModal = lazy(() =>
+  import('./modals/HistoryModal').then((m) => ({ default: m.HistoryModal })),
+);
+const NewWorkoutModal = lazy(() =>
+  import('./modals/NewWorkoutModal').then((m) => ({ default: m.NewWorkoutModal })),
+);
+const SettingsModal = lazy(() =>
+  import('./modals/SettingsModal').then((m) => ({ default: m.SettingsModal })),
+);
 
 export interface AppProps {
   store?: WorkoutStore;
@@ -173,37 +183,47 @@ export function App({ store: externalStore }: AppProps) {
         />
       </main>
 
-      <NewWorkoutModal
-        open={newWorkoutModalOpen}
-        currentSettings={state.activeRoutine.settings}
-        userExercises={state.activeRoutine.exercises}
-        onClose={() => setNewWorkoutModalOpen(false)}
-        onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
-      />
+      <Suspense fallback={null}>
+        {newWorkoutModalOpen && (
+          <NewWorkoutModal
+            open={newWorkoutModalOpen}
+            currentSettings={state.activeRoutine.settings}
+            userExercises={state.activeRoutine.exercises}
+            onClose={() => setNewWorkoutModalOpen(false)}
+            onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
+          />
+        )}
 
-      <ExerciseModal
-        open={exerciseModalOpen}
-        editingExercise={editingExercise}
-        onClose={() => setExerciseModalOpen(false)}
-        onSave={(input) => store.saveExercise(input)}
-      />
+        {exerciseModalOpen && (
+          <ExerciseModal
+            open={exerciseModalOpen}
+            editingExercise={editingExercise}
+            onClose={() => setExerciseModalOpen(false)}
+            onSave={(input) => store.saveExercise(input)}
+          />
+        )}
 
-      <SettingsModal
-        open={settingsModalOpen}
-        settings={state.activeRoutine.settings}
-        voiceSupported={state.voiceSupported}
-        onClose={() => setSettingsModalOpen(false)}
-        onSave={(next) => store.updateSettings(next)}
-        onTestBeep={() => store.testAudioBeep()}
-        onTestVoice={() => store.testVoice()}
-      />
+        {settingsModalOpen && (
+          <SettingsModal
+            open={settingsModalOpen}
+            settings={state.activeRoutine.settings}
+            voiceSupported={state.voiceSupported}
+            onClose={() => setSettingsModalOpen(false)}
+            onSave={(next) => store.updateSettings(next)}
+            onTestBeep={() => store.testAudioBeep()}
+            onTestVoice={() => store.testVoice()}
+          />
+        )}
 
-      <HistoryModal
-        open={historyModalOpen}
-        history={state.data.history}
-        onClose={() => setHistoryModalOpen(false)}
-        onLogManualSession={() => store.logManualSession()}
-      />
+        {historyModalOpen && (
+          <HistoryModal
+            open={historyModalOpen}
+            history={state.data.history}
+            onClose={() => setHistoryModalOpen(false)}
+            onLogManualSession={() => store.logManualSession()}
+          />
+        )}
+      </Suspense>
 
       <ToastHost toasts={state.toasts} onDismiss={(id) => store.dismissToast(id)} />
     </>

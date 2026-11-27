@@ -19,7 +19,10 @@
     "check": "pnpm typecheck && pnpm lint && pnpm fmt:check && pnpm test && pnpm build && pnpm check:budget"
   },
   "dependencies": {
-    "preact": "^11.2.0"
+    "@base-ui/react": "^1.9.0",
+    "clsx": "^2.1.1",
+    "preact": "^11.2.0",
+    "tailwind-merge": "^3.7.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",

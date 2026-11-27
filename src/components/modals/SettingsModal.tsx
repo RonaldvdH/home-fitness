@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { WorkoutSettings } from '../../domain/schema';
 import { ModalDialog } from './ModalDialog';
 
@@ -29,8 +29,12 @@ export function SettingsModal({
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
   const [voiceEnabled, setVoiceEnabled] = useState(settings.voiceEnabled);
 
+  const lastSyncedRef = useRef({ open, settings });
+
   useEffect(() => {
-    if (!open) return;
+    const prev = lastSyncedRef.current;
+    lastSyncedRef.current = { open, settings };
+    if (!open || (prev.open === open && prev.settings === settings)) return;
     setWorkSec(settings.workSec);
     setRestSec(settings.restSec);
     setRounds(settings.rounds);
