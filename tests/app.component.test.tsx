@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../src/components/App';
 import { createDefaultAppData } from '../src/domain/defaults';
 import type { AppDataV3 } from '../src/domain/schema';
+import { createFoldableController } from '../src/services/foldable';
 import type { StorageAdapter } from '../src/services/storage';
 import { createWorkoutStore } from '../src/state/workoutStore';
 
@@ -132,6 +133,38 @@ describe('<App /> integration flows', () => {
       expect(ex.durations).toContain(10);
     }
 
+    store.destroy();
+  });
+
+  it('enters Floor Mode manually via HeaderBar, locks scroll, controls workout, and exits cleanly', async () => {
+    const store = createWorkoutStore({ storage: createMemoryAdapter() });
+    const foldable = createFoldableController({ matchMedia: null });
+    render(<App store={store} foldable={foldable} />);
+
+    fireEvent.click(screen.getByLabelText('Enter Floor Mode'));
+
+    const flexView = await screen.findByTestId('flex-workout-view', {}, { timeout: 5000 });
+    expect(flexView.getAttribute('data-state')).toBe('manual');
+    expect(document.documentElement.classList.contains('floor-mode-active')).toBe(true);
+    expect(screen.getByTestId('flex-top-segment')).toBeTruthy();
+    expect(screen.getByTestId('flex-bottom-segment')).toBeTruthy();
+
+    // Advance to first WORK exercise inside Floor Mode
+    fireEvent.click(screen.getByLabelText('Next step'));
+    expect(screen.getByTestId('phase-badge').textContent).toBe('WORK');
+    expect(screen.getByTestId('active-exercise-title').textContent).toBe(
+      'Dumbbell Overhead Shoulder Press',
+    );
+
+    // Exit Floor Mode and confirm workout progress is preserved and scroll lock removed
+    fireEvent.click(screen.getByLabelText('Exit Floor Mode'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('flex-workout-view')).toBeNull();
+    });
+    expect(document.documentElement.classList.contains('floor-mode-active')).toBe(false);
+    expect(screen.getByTestId('step-counter').textContent?.startsWith('2/')).toBe(true);
+
+    foldable.destroy();
     store.destroy();
   });
 });
