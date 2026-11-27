@@ -142,7 +142,8 @@ Keep modules strictly organized by responsibility:
    - Modals must use the shared dialog primitive (`ModalDialog.tsx`, migrating to `shadcn` + Base UI `Dialog` per [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md); enforced by `tests/architecture.test.ts`).
    - Keep transport buttons touch-friendly and keyboard shortcuts disabled while typing in form fields or when modals are open.
 6. **Standardize Interactive UI Primitives (`shadcn` + Base UI)**:
-   - Do **not** build reusable interactive UI primitives (dialogs, drawers/sheets, switches, selects, tabs, toggle groups, popovers, toasts) from scratch. Generate and compose `shadcn` + Base UI (`@base-ui/react`) components in `src/components/ui/` per [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md).
+   - Use **`shadcn` + Base UI (`@base-ui/react`)** in `src/components/ui/` for all reusable interactive primitives (dialogs, drawers/sheets, switches, selects, tabs, toggle groups, popovers, toasts).
+   - **Only build a component from scratch when it does not exist in the library**, and follow `shadcn` + Base UI conventions as closely as possible (composable parts, `cn()` class merging, `data-slot`/`data-state` hooks, accessible ARIA/keyboard contracts; see [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md)).
 
 ## 6. Verification Checklist Before Finishing Changes
 

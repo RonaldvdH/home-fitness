@@ -9,10 +9,11 @@ Hand-rolling interactive UI primitives (dialogs, drawers/sheets, switches, selec
 
 ## Decision
 
-1. **Do Not Build Interactive Primitives From Scratch**:
+1. **Use `shadcn` + Base UI First; Only Build From Scratch When Missing**:
    - Standardize all reusable interactive UI primitives on **shadcn + Base UI (`@base-ui/react`)**, generated into `src/components/ui/` and owned directly in the repository (styled with Tailwind CSS v4).
    - Examples: `Dialog`, `Drawer`/`Sheet`, `Switch`, `Select`, `Tabs`, `ToggleGroup`, `Popover`, `Tooltip`, `Toast`.
-   - Domain-specific views (`WorkoutStage`, `FlexWorkoutView`, `AthleteSvg`, `Stage3D`) compose these primitives rather than re-implementing modal backdrops, focus traps, or custom accessible controls.
+   - **Only build a component from scratch when it does not exist in `shadcn` / Base UI** (e.g., domain-specific workout surfaces like `WorkoutStage`, `FlexWorkoutView`, `AthleteSvg`, `Stage3D`, or custom timer rings).
+   - When building a custom component from scratch, **follow the `shadcn` + Base UI way of working as closely as possible**: composable sub-parts, `cn()` class-name merging, `data-slot` / `data-state` styling hooks, clean prop forwarding, and complete ARIA & keyboard accessibility.
 2. **Preact Compatibility (`preact/compat`)**:
    - Use `@preact/preset-vite`'s built-in `react` / `react-dom` -> `preact/compat` aliasing (plus matching `tsconfig.json` path mappings when initializing `components.json` with the Base UI preset).
    - Every newly added `shadcn` + Base UI primitive must be verified with both `pnpm check` (including bundle budget) and `pnpm test:e2e` (Playwright Chromium).
