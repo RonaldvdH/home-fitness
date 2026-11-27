@@ -2,6 +2,11 @@ import { lazy, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { Exercise } from '../domain/schema';
 import {
+  createFoldableController,
+  type FloorModeSnapshot,
+  type FoldableController,
+} from '../services/foldable';
+import {
   createWorkoutStore,
   type WorkoutStore,
   type WorkoutStoreState,
@@ -11,6 +16,9 @@ import { RoutineSidebar } from './RoutineSidebar';
 import { ToastHost } from './ToastHost';
 import { WorkoutStage } from './WorkoutStage';
 
+const FlexWorkoutView = lazy(() =>
+  import('./FlexWorkoutView').then((m) => ({ default: m.FlexWorkoutView })),
+);
 const ExerciseModal = lazy(() =>
   import('./modals/ExerciseModal').then((m) => ({ default: m.ExerciseModal })),
 );
@@ -26,6 +34,7 @@ const SettingsModal = lazy(() =>
 
 export interface AppProps {
   store?: WorkoutStore;
+  foldable?: FoldableController;
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
@@ -34,9 +43,15 @@ function isEditableElement(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
 }
 
-export function App({ store: externalStore }: AppProps) {
+export function App({ store: externalStore, foldable: externalFoldable }: AppProps) {
   const store = useMemo(() => externalStore ?? createWorkoutStore(), [externalStore]);
   const [state, setState] = useState<WorkoutStoreState>(() => store.getState());
+
+  const foldable = useMemo(
+    () => externalFoldable ?? createFoldableController(),
+    [externalFoldable],
+  );
+  const [floorMode, setFloorMode] = useState<FloorModeSnapshot>(() => foldable.getSnapshot());
 
   const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
@@ -60,7 +75,28 @@ export function App({ store: externalStore }: AppProps) {
     };
   }, [store, externalStore]);
 
-  // Hands-free keyboard controls (Space, Arrows, M, V) when no modal/input is focused.
+  useEffect(() => {
+    setFloorMode(foldable.getSnapshot());
+    const unsubscribe = foldable.subscribe(() => {
+      setFloorMode(foldable.getSnapshot());
+    });
+    return () => {
+      unsubscribe();
+      if (!externalFoldable) {
+        foldable.destroy();
+      }
+    };
+  }, [foldable, externalFoldable]);
+
+  // Lock page scroll while Floor Mode is active so bottom-half taps never shift the top visual.
+  useEffect(() => {
+    document.documentElement.classList.toggle('floor-mode-active', floorMode.active);
+    return () => {
+      document.documentElement.classList.remove('floor-mode-active');
+    };
+  }, [floorMode.active]);
+
+  // Hands-free keyboard controls (Space, Arrows, M, V, F, Escape) when no modal/input is focused.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (anyModalOpen || isEditableElement(event.target)) return;
@@ -81,12 +117,18 @@ export function App({ store: externalStore }: AppProps) {
       } else if ((event.key === 'v' || event.key === 'V') && store.getState().voiceSupported) {
         event.preventDefault();
         store.toggleVoice();
+      } else if (event.key === 'f' || event.key === 'F') {
+        event.preventDefault();
+        foldable.toggleFloorMode();
+      } else if (event.key === 'Escape' && foldable.getSnapshot().active) {
+        event.preventDefault();
+        foldable.exitFloorMode();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [store, anyModalOpen]);
+  }, [store, foldable, anyModalOpen]);
 
   const currentStep = state.timeline[state.timer.currentIndex] ?? state.timeline[0]!;
   const nextStep = state.timeline[state.timer.currentIndex + 1] ?? null;
@@ -131,57 +173,89 @@ export function App({ store: externalStore }: AppProps) {
 
   return (
     <>
-      <HeaderBar
-        currentStep={currentStep}
-        totalSteps={state.timeline.length}
-        totalDurationSec={state.totalDurationSec}
-        timer={state.timer}
-        soundEnabled={state.activeRoutine.settings.soundEnabled}
-        voiceEnabled={state.activeRoutine.settings.voiceEnabled}
-        voiceSupported={state.voiceSupported}
-        onToggleStartPause={() => store.toggleStartPause()}
-        onPrev={() => store.stepBackward()}
-        onNext={() => store.stepForward()}
-        onReset={() => store.reset()}
-        onToggleSound={() => store.toggleSound()}
-        onToggleVoice={() => store.toggleVoice()}
-        onOpenSettings={() => setSettingsModalOpen(true)}
-        onOpenHistory={() => setHistoryModalOpen(true)}
-      />
+      {floorMode.active ? (
+        <Suspense fallback={null}>
+          <FlexWorkoutView
+            routineName={state.activeRoutine.name}
+            currentStep={currentStep}
+            nextStep={nextStep}
+            totalSteps={state.timeline.length}
+            timer={state.timer}
+            previewExercise={previewExercise}
+            demoSpeed={state.activeRoutine.settings.demoSpeed}
+            soundEnabled={state.activeRoutine.settings.soundEnabled}
+            voiceEnabled={state.activeRoutine.settings.voiceEnabled}
+            voiceSupported={state.voiceSupported}
+            activation={floorMode.activation}
+            onToggleStartPause={() => store.toggleStartPause()}
+            onPrev={() => store.stepBackward()}
+            onNext={() => store.stepForward()}
+            onReset={() => store.reset()}
+            onToggleSound={() => store.toggleSound()}
+            onToggleVoice={() => store.toggleVoice()}
+            onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
+            onClearPreview={() => store.clearPreview()}
+            onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
+            onExitFloorMode={() => foldable.exitFloorMode()}
+          />
+        </Suspense>
+      ) : (
+        <>
+          <HeaderBar
+            currentStep={currentStep}
+            totalSteps={state.timeline.length}
+            totalDurationSec={state.totalDurationSec}
+            timer={state.timer}
+            soundEnabled={state.activeRoutine.settings.soundEnabled}
+            voiceEnabled={state.activeRoutine.settings.voiceEnabled}
+            voiceSupported={state.voiceSupported}
+            floorModeActive={floorMode.active}
+            onToggleStartPause={() => store.toggleStartPause()}
+            onPrev={() => store.stepBackward()}
+            onNext={() => store.stepForward()}
+            onReset={() => store.reset()}
+            onToggleSound={() => store.toggleSound()}
+            onToggleVoice={() => store.toggleVoice()}
+            onToggleFloorMode={() => foldable.toggleFloorMode()}
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenHistory={() => setHistoryModalOpen(true)}
+          />
 
-      <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-        <WorkoutStage
-          routineName={state.activeRoutine.name}
-          currentStep={currentStep}
-          nextStep={nextStep}
-          previewExercise={previewExercise}
-          isCompleted={state.timer.status === 'completed'}
-          demoSpeed={state.activeRoutine.settings.demoSpeed}
-          onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
-          onClearPreview={() => store.clearPreview()}
-          onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
-        />
+          <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+            <WorkoutStage
+              routineName={state.activeRoutine.name}
+              currentStep={currentStep}
+              nextStep={nextStep}
+              previewExercise={previewExercise}
+              isCompleted={state.timer.status === 'completed'}
+              demoSpeed={state.activeRoutine.settings.demoSpeed}
+              onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
+              onClearPreview={() => store.clearPreview()}
+              onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
+            />
 
-        <RoutineSidebar
-          exercises={state.activeRoutine.exercises}
-          highlightedExerciseId={highlightedExerciseId}
-          onAddExercise={() => {
-            setEditingExercise(null);
-            setExerciseModalOpen(true);
-          }}
-          onPreviewExercise={(id) => store.previewExercise(id)}
-          onMoveExercise={(index, delta) => store.moveExercise(index, delta)}
-          onToggleExercise={(id) => store.toggleExerciseActive(id)}
-          onEditExercise={(exercise) => {
-            setEditingExercise(exercise);
-            setExerciseModalOpen(true);
-          }}
-          onDeleteExercise={(id) => store.deleteExercise(id)}
-          onExportJson={handleExportJson}
-          onImportFile={handleImportFile}
-          onRestoreDefaults={() => store.restoreDefaultExercises()}
-        />
-      </main>
+            <RoutineSidebar
+              exercises={state.activeRoutine.exercises}
+              highlightedExerciseId={highlightedExerciseId}
+              onAddExercise={() => {
+                setEditingExercise(null);
+                setExerciseModalOpen(true);
+              }}
+              onPreviewExercise={(id) => store.previewExercise(id)}
+              onMoveExercise={(index, delta) => store.moveExercise(index, delta)}
+              onToggleExercise={(id) => store.toggleExerciseActive(id)}
+              onEditExercise={(exercise) => {
+                setEditingExercise(exercise);
+                setExerciseModalOpen(true);
+              }}
+              onDeleteExercise={(id) => store.deleteExercise(id)}
+              onExportJson={handleExportJson}
+              onImportFile={handleImportFile}
+              onRestoreDefaults={() => store.restoreDefaultExercises()}
+            />
+          </main>
+        </>
+      )}
 
       <Suspense fallback={null}>
         {newWorkoutModalOpen && (

@@ -98,18 +98,22 @@ Keep modules strictly organized by responsibility:
 │   │   ├── storage.ts          # StorageAdapter seam + LocalStorageAdapter + JSON backup helpers
 │   │   ├── audio.ts            # Web Audio API interval beep synthesizer
 │   │   ├── speech.ts           # Optional Web Speech API voice coaching announcements
-│   │   └── wakeLock.ts         # Screen Wake Lock API wrapper with visibilitychange re-acquire
+│   │   ├── wakeLock.ts         # Screen Wake Lock API wrapper with visibilitychange re-acquire
+│   │   └── foldable.ts         # Viewport Segments Flex Mode detection + manual Floor Mode controller
 │   ├── state/
 │   │   └── workoutStore.ts     # Encapsulated reactive store wiring data, timer, preview, services
 │   └── components/
-│       ├── App.tsx             # Root shell, keyboard shortcuts, modal coordination
-│       ├── HeaderBar.tsx       # Compact mobile-first timer pill, transport & audio/voice toggles
+│       ├── App.tsx             # Root shell, keyboard shortcuts, Floor Mode & modal coordination
+│       ├── HeaderBar.tsx       # Compact mobile-first timer pill, transport, Floor Mode & audio/voice toggles
+│       ├── FlexWorkoutView.tsx # Galaxy Z Flip Flex / Floor Mode split layout (top display, bottom controls)
 │       ├── WorkoutStage.tsx    # Active/preview exercise stage, New Workout bar, form cues, Up Next
 │       ├── AthleteSvg.tsx      # 60 FPS ref-driven SVG renderer (zero per-frame Preact re-renders)
 │       ├── RoutineSidebar.tsx  # Exercise list controls (preview, reorder, toggle, edit, delete, backup)
 │       ├── ToastHost.tsx       # Accessible live-region toast notifications
+│       ├── ui/
+│       │   └── dialog.tsx      # shadcn + Base UI Dialog primitive (@base-ui/react/dialog)
 │       └── modals/
-│           ├── ModalDialog.tsx     # Accessible dialog wrapper (Escape, backdrop click, ARIA)
+│           ├── ModalDialog.tsx     # Shared modal shell composing @/components/ui/dialog
 │           ├── NewWorkoutModal.tsx # 1-screen duration + muscle group workout builder with Shuffle
 │           ├── ExerciseModal.tsx   # Add/Edit exercise with animation, equipment & tag chips
 │           ├── SettingsModal.tsx
@@ -117,6 +121,8 @@ Keep modules strictly organized by responsibility:
 └── tests/
     ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync
     ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & preset matrix checks
+    ├── foldable.test.ts        # Viewport Segments auto-detection & manual Floor Mode state machine
+    ├── modal-dialog.test.tsx   # Base UI Dialog rendering, close button & Escape dismissal
     ├── schema.test.ts          # Schema validation, v2 -> v3 migration, tag inference, corrupt recovery
     ├── presets.test.ts         # Tag filtering, variation/shuffle, custom exercises, duration accuracy
     ├── timeline.test.ts        # Timeline ordering, overrides, formatting

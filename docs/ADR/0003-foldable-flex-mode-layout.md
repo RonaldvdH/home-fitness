@@ -1,6 +1,6 @@
 # ADR-0003: Foldable Flip-Phone Flex / Floor Mode Layout Contract
 
-- **Status**: Accepted (Planned for Phase 2)
+- **Status**: Accepted (Implemented in Phase 2)
 - **Date**: 2026-11-26
 
 ## Context

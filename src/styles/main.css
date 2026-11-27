@@ -66,3 +66,21 @@ body {
     rgba(2, 6, 23, 0.9) 100%
   );
 }
+
+/* Foldable Flex / Floor Mode (ADR-0003) */
+html.floor-mode-active,
+html.floor-mode-active body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100dvh;
+}
+
+.flex-segment-top {
+  height: 50dvh;
+  height: env(viewport-segment-height 0 0, 50dvh);
+}
+
+.flex-segment-bottom {
+  height: 50dvh;
+  height: env(viewport-segment-height 0 1, 50dvh);
+}

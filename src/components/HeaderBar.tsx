@@ -10,12 +10,14 @@ export interface HeaderBarProps {
   soundEnabled: boolean;
   voiceEnabled: boolean;
   voiceSupported: boolean;
+  floorModeActive: boolean;
   onToggleStartPause: () => void;
   onPrev: () => void;
   onNext: () => void;
   onReset: () => void;
   onToggleSound: () => void;
   onToggleVoice: () => void;
+  onToggleFloorMode: () => void;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
 }
@@ -54,12 +56,14 @@ export function HeaderBar({
   soundEnabled,
   voiceEnabled,
   voiceSupported,
+  floorModeActive,
   onToggleStartPause,
   onPrev,
   onNext,
   onReset,
   onToggleSound,
   onToggleVoice,
+  onToggleFloorMode,
   onOpenSettings,
   onOpenHistory,
 }: HeaderBarProps) {
@@ -95,8 +99,8 @@ export function HeaderBar({
     <header class="sticky top-0 z-30 w-full bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
       <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5">
         {/* Left: App Brand & Local Storage Indicator */}
-        <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
-          <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+        <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+          <div class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
             <svg
               class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950"
               viewBox="0 0 24 24"
@@ -262,11 +266,40 @@ export function HeaderBar({
           </div>
         </div>
 
-        {/* Right: Audio, Voice, Settings, History */}
-        <div class="flex items-center gap-1 sm:gap-2 order-2 lg:order-3 shrink-0">
-          <span class="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-medium bg-slate-900 border border-slate-800 text-slate-300">
+        {/* Right: Floor Mode, Audio, Voice, Settings, History */}
+        <div class="flex items-center gap-1 sm:gap-1.5 order-2 lg:order-3 shrink-0">
+          <span class="hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-medium bg-slate-900 border border-slate-800 text-slate-300">
             {formatMMSS(totalDurationSec)} Total
           </span>
+
+          <button
+            type="button"
+            onClick={onToggleFloorMode}
+            aria-label={floorModeActive ? 'Exit Floor Mode' : 'Enter Floor Mode'}
+            aria-pressed={floorModeActive}
+            title="Flip-Phone Floor Mode (F)"
+            class={`p-1.5 sm:px-2.5 sm:py-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 ${
+              floorModeActive
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200'
+            }`}
+          >
+            <svg
+              class="w-4 h-4 text-emerald-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="6" y="3" width="12" height="8" rx="1.5" />
+              <path d="M5 13h14" />
+              <path d="M6 15h12l1.5 5.5a1 1 0 0 1-.97 1.25H5.47a1 1 0 0 1-.97-1.25L6 15z" />
+            </svg>
+            <span class="hidden sm:inline">Floor</span>
+          </button>
 
           <button
             type="button"
@@ -274,7 +307,7 @@ export function HeaderBar({
             aria-label={soundEnabled ? 'Mute interval beeps' : 'Enable interval beeps'}
             aria-pressed={soundEnabled}
             title="Toggle Interval Beeps (M)"
-            class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
+            class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
           >
             {soundEnabled ? (
               <svg
@@ -311,7 +344,7 @@ export function HeaderBar({
               aria-label={voiceEnabled ? 'Mute voice coaching' : 'Enable voice coaching'}
               aria-pressed={voiceEnabled}
               title="Toggle Voice Announcements (V)"
-              class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
+              class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
             >
               <svg
                 class={`w-4 h-4 ${voiceEnabled ? 'text-sky-400' : 'text-slate-500'}`}
@@ -334,7 +367,7 @@ export function HeaderBar({
             onClick={onOpenSettings}
             aria-label="Open timer settings"
             title="Timer & Audio Settings"
-            class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition"
+            class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition"
           >
             <svg
               class="w-4 h-4"
@@ -353,7 +386,7 @@ export function HeaderBar({
             type="button"
             onClick={onOpenHistory}
             aria-label="Open workout history"
-            class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
+            class="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
           >
             <svg
               class="w-4 h-4 text-emerald-400"

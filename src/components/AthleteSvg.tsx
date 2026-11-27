@@ -6,6 +6,7 @@ export interface AthleteSvgProps {
   animationType: AnimationId;
   speedMultiplier: number;
   weightLabel: string | null;
+  variant?: 'default' | 'flex';
 }
 
 function setLineAttrs(
@@ -41,7 +42,12 @@ function setDumbbellTransform(
   );
 }
 
-export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: AthleteSvgProps) {
+export function AthleteSvg({
+  animationType,
+  speedMultiplier,
+  weightLabel,
+  variant = 'default',
+}: AthleteSvgProps) {
   const showDumbbells = weightLabel !== null;
 
   const cueRef = useRef<HTMLDivElement>(null);
@@ -263,23 +269,30 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
   }, [animationType, showDumbbells]);
 
   const badgeText = weightLabel ?? '';
+  const isFlex = variant === 'flex';
 
   return (
     <>
-      <div class="absolute top-3 left-3 sm:top-3.5 sm:left-4 flex items-center gap-1.5 sm:gap-2">
-        <span
-          class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"
-          aria-hidden="true"
-        />
-        <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider sm:tracking-widest text-slate-400">
-          60 FPS Guide
-        </span>
-      </div>
+      {!isFlex && (
+        <div class="absolute top-3 left-3 sm:top-3.5 sm:left-4 flex items-center gap-1.5 sm:gap-2">
+          <span
+            class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"
+            aria-hidden="true"
+          />
+          <span class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider sm:tracking-widest text-slate-400">
+            60 FPS Guide
+          </span>
+        </div>
+      )}
 
       <div
         ref={cueRef}
         data-testid="live-rep-cue"
-        class="absolute top-2.5 right-3 sm:top-3.5 sm:right-4 max-w-[52%] truncate px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-mono font-semibold text-emerald-300"
+        class={
+          isFlex
+            ? 'absolute bottom-2.5 right-3 max-w-[65%] truncate px-2.5 py-1 rounded-lg bg-slate-950/85 border border-slate-700/80 text-xs font-mono font-semibold text-emerald-300 shadow-lg'
+            : 'absolute top-2.5 right-3 sm:top-3.5 sm:right-4 max-w-[52%] truncate px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-mono font-semibold text-emerald-300'
+        }
       >
         Controlled Tempo
       </div>
@@ -288,7 +301,11 @@ export function AthleteSvg({ animationType, speedMultiplier, weightLabel }: Athl
         viewBox="0 0 320 280"
         role="img"
         aria-label="Animated exercise form demonstrator"
-        class="w-full h-full max-h-[330px] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]"
+        class={
+          isFlex
+            ? 'w-full h-full max-h-full drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]'
+            : 'w-full h-full max-h-[330px] drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]'
+        }
       >
         <line
           ref={floorRef}
