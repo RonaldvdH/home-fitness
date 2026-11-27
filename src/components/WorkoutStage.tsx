@@ -51,7 +51,7 @@ export function WorkoutStage({
     <section class="lg:col-span-8 min-w-0 flex flex-col gap-4">
       <div class="rounded-3xl bg-slate-900 border border-slate-800/90 overflow-hidden shadow-2xl">
         {/* Active Routine Quick-Setup Strip */}
-        <div class="px-4 sm:px-7 py-2.5 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+        <div class="px-3.5 sm:px-7 py-2.5 bg-slate-950/70 border-b border-slate-800/80 flex items-center justify-between gap-2 text-xs">
           <span
             data-testid="active-routine-name"
             class="font-semibold text-slate-300 truncate min-w-0"
@@ -79,9 +79,10 @@ export function WorkoutStage({
 
         {/* Workout Completed Banner */}
         {isCompleted && !isPreview && (
-          <div class="px-4 sm:px-7 py-2.5 bg-emerald-950/60 border-b border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span class="font-semibold text-emerald-200">
-              Workout complete! Ready to switch it up?
+          <div class="px-3.5 sm:px-7 py-2 bg-emerald-950/60 border-b border-emerald-500/30 flex items-center justify-between gap-2 text-xs">
+            <span class="font-semibold text-emerald-200 min-w-0 truncate">
+              Workout complete!
+              <span class="hidden sm:inline"> Ready to switch it up?</span>
             </span>
             <button
               type="button"
@@ -95,9 +96,10 @@ export function WorkoutStage({
 
         {/* Non-destructive Preview Banner */}
         {isPreview && (
-          <div class="px-4 sm:px-7 py-2.5 bg-purple-950/60 border-b border-purple-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span class="font-semibold text-purple-200">
-              Previewing exercise — your workout progress is preserved.
+          <div class="px-3.5 sm:px-7 py-2 bg-purple-950/60 border-b border-purple-500/30 flex items-center justify-between gap-2 text-xs">
+            <span class="font-semibold text-purple-200 min-w-0 truncate">
+              Previewing exercise
+              <span class="hidden sm:inline"> — your workout progress is preserved.</span>
             </span>
             <button
               type="button"
@@ -109,50 +111,63 @@ export function WorkoutStage({
           </div>
         )}
 
-        {/* Top Exercise Header Bar */}
-        <div class="px-4 sm:px-7 py-3.5 sm:py-5 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-slate-900/60">
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-              <span class="text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        {/* Top Exercise Header Bar (full-width stacked rows on <sm, 2-column split on sm+) */}
+        <div
+          data-testid="exercise-header"
+          class="px-3.5 sm:px-7 py-3 sm:py-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4 bg-slate-900/60"
+        >
+          <div class="min-w-0 w-full sm:flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+              <span
+                data-testid="exercise-equipment-badge"
+                class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap max-w-full truncate"
+              >
                 {activeExercise.equipment.label}
               </span>
-              <span class="text-xs font-medium text-slate-400">{activeExercise.muscleGroup}</span>
+              <span class="text-xs font-medium text-slate-400 min-w-0 truncate">
+                {activeExercise.muscleGroup}
+              </span>
             </div>
             <h2
               data-testid="active-exercise-title"
-              class="text-lg sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight break-words"
+              class="text-lg sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-snug break-words"
             >
               {activeExercise.name}
             </h2>
           </div>
 
           {/* Animation Tempo Control Pill */}
-          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs shrink-0">
-            <span class="px-1.5 sm:px-2 text-slate-500 font-medium">Pace:</span>
-            <button
-              type="button"
-              onClick={() => onSetDemoSpeed(0.65)}
-              aria-pressed={demoSpeed < 0.9}
-              class={`px-2.5 py-1 rounded-lg transition ${
-                demoSpeed < 0.9
-                  ? 'bg-slate-800 text-emerald-400 font-semibold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Slow
-            </button>
-            <button
-              type="button"
-              onClick={() => onSetDemoSpeed(1)}
-              aria-pressed={demoSpeed >= 0.9}
-              class={`px-2.5 py-1 rounded-lg transition ${
-                demoSpeed >= 0.9
-                  ? 'bg-slate-800 text-emerald-400 font-semibold'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Normal
-            </button>
+          <div class="flex items-center justify-between sm:justify-start gap-2 sm:gap-1 bg-slate-950 p-1 pl-2.5 sm:pl-1 rounded-xl border border-slate-800 text-xs w-full sm:w-auto shrink-0">
+            <span class="sm:px-2 text-slate-400 sm:text-slate-500 font-medium">
+              <span class="sm:hidden">Demo Pace</span>
+              <span class="hidden sm:inline">Pace:</span>
+            </span>
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onSetDemoSpeed(0.65)}
+                aria-pressed={demoSpeed < 0.9}
+                class={`px-3 sm:px-2.5 py-1 rounded-lg transition ${
+                  demoSpeed < 0.9
+                    ? 'bg-slate-800 text-emerald-400 font-semibold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Slow
+              </button>
+              <button
+                type="button"
+                onClick={() => onSetDemoSpeed(1)}
+                aria-pressed={demoSpeed >= 0.9}
+                class={`px-3 sm:px-2.5 py-1 rounded-lg transition ${
+                  demoSpeed >= 0.9
+                    ? 'bg-slate-800 text-emerald-400 font-semibold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Normal
+              </button>
+            </div>
           </div>
         </div>
 

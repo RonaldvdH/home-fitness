@@ -30,10 +30,12 @@ export function RoutineSidebar({
   return (
     <aside class="lg:col-span-4 min-w-0 flex flex-col gap-4">
       <div class="rounded-3xl bg-slate-900 border border-slate-800/90 p-4 sm:p-5 shadow-xl flex flex-col min-w-0">
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
-          <div class="min-w-0">
-            <h3 class="text-base font-bold text-white">Your Circuit Routine</h3>
-            <p class="text-xs text-slate-400">Tap any move to preview • Auto-saved</p>
+        <div class="flex items-center justify-between gap-2 mb-3.5">
+          <div class="min-w-0 flex-1">
+            <h3 class="text-base font-bold text-white truncate">Your Circuit Routine</h3>
+            <p class="text-xs text-slate-400 truncate">
+              Tap a move to preview<span class="hidden sm:inline"> • Auto-saved</span>
+            </p>
           </div>
           <button
             type="button"
