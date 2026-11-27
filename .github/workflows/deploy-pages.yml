@@ -5,8 +5,7 @@ on:
     branches: [main]
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
-      - 'AGENTS.md'
+      - '**/*.md'
   workflow_dispatch:
 
 permissions:

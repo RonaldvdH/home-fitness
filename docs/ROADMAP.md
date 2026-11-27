@@ -29,7 +29,7 @@ Because this repository is AI-developed and hosted on GitHub's free tier:
    - AI agents must run fast local checks before pushing so GitHub Actions is never burned on trial-and-error retries.
 2. **GitHub Actions Build-Minute Efficiency**:
    - Cancel superseded CI runs automatically (`concurrency: { cancel-in-progress: true }`).
-   - Skip full build/deploy CI on pure documentation edits (`docs/**`, `README.md`, `AGENTS.md`).
+   - Skip full build/deploy CI on pure documentation edits (`docs/**`, `**/*.md`).
    - Cache `pnpm` store and Playwright Chromium binaries (`~/.cache/ms-playwright`), install **Chromium only** (`--project=chromium`), and run Playwright only when UI/layout/E2E paths change.
 3. **Strict Architecture, Pragmatic Exceptions**:
    - Enforce architectural boundaries strictly; allow documented 1-off trivial exceptions in [`docs/EXCEPTIONS.md`](./EXCEPTIONS.md) so future AI agents never repeatedly re-flag decided items.

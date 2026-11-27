@@ -5,13 +5,11 @@ on:
     branches: [main]
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
-      - 'AGENTS.md'
+      - '**/*.md'
   pull_request:
     paths-ignore:
       - 'docs/**'
-      - 'README.md'
-      - 'AGENTS.md'
+      - '**/*.md'
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
