@@ -1,19 +1,33 @@
-# AGENTS.md — Dumbbell Circuit Studio
+# AGENTS.md — Home Fitness Studio
 
 Instructions and engineering guidelines for AI coding agents and human contributors working in this repository.
 
-## 1. Project Overview & Tech Stack
+> **This repository is primarily developed by AI coding agents.** All architectural contracts, roadmap phases, and quality guardrails live inside this repository and must be followed strictly on every change.
 
-**Dumbbell Circuit Studio** is an offline-first home interval workout trainer featuring a 60 FPS procedural SVG form demonstrator, wall-clock interval timer with Screen Wake Lock, Web Audio interval beeps + optional Web Speech voice cues, a customizable circuit routine builder, and versioned `localStorage` persistence with JSON backup/restore.
+## 1. Authoritative Docs & Working Protocol
 
-- **Package Manager**: `pnpm` (do not commit `npm` or `yarn` lockfiles)
+Before implementing any feature or fix:
+
+1. Check [`docs/ROADMAP.md`](docs/ROADMAP.md) to understand the current phase, scope, and mandatory guardrails.
+2. Read relevant Architecture Decision Records in [`docs/ADR/`](docs/ADR/):
+   - [`0001-preact-typescript-offline-pwa.md`](docs/ADR/0001-preact-typescript-offline-pwa.md) — Stack, offline PWA, `StorageAdapter`, lazy loading
+   - [`0002-procedural-3d-mannequin-demonstrator.md`](docs/ADR/0002-procedural-3d-mannequin-demonstrator.md) — Procedural Three.js 3D mannequin + 2D SVG fallback
+   - [`0003-foldable-flex-mode-layout.md`](docs/ADR/0003-foldable-flex-mode-layout.md) — Galaxy Z Flip Flex / Floor Mode split contract
+   - [`0004-spaces-equipment-and-workout-styles.md`](docs/ADR/0004-spaces-equipment-and-workout-styles.md) — Workout Spaces, equipment tags, and Pilates/Mobility styles
+3. Ship every phase or fix on a feature branch via pull request (never push directly to `main`), updating `docs/ROADMAP.md` when a phase completes.
+
+## 2. Project Overview & Tech Stack
+
+**Home Fitness Studio** is an offline-first home interval workout trainer featuring a 60 FPS procedural form demonstrator, wall-clock interval timer with Screen Wake Lock, Web Audio interval beeps + optional Web Speech voice cues, a tag-driven workout builder, and versioned `localStorage` persistence with JSON backup/restore.
+
+- **Package Manager**: `pnpm` (`packageManager` pinned in `package.json`; do not commit `npm` or `yarn` lockfiles)
 - **UI & Language**: Preact (`preact`) + strict TypeScript (`typescript`)
-- **Bundler / Dev Server / PWA**: Vite (`vite.config.ts`) + `vite-plugin-pwa`
+- **Bundler / Dev Server / PWA**: Vite (`vite.config.ts`) + `vite-plugin-pwa` (supports subpath builds via `VITE_BASE_PATH`)
 - **Styling**: Tailwind CSS v4 (`@tailwindcss/vite`) + custom CSS in `src/styles/main.css`
 - **Linting & Formatting**: `oxlint` (`.oxlintrc.json`) + `oxfmt` (`.oxfmtrc.json`)
 - **Testing**: Vitest (`vitest.config.ts`, `happy-dom`, `@testing-library/preact`)
 
-## 2. Common Commands
+## 3. Common Commands
 
 ```bash
 pnpm install        # Install dependencies
@@ -28,12 +42,17 @@ pnpm build          # Production PWA build to dist/
 pnpm preview        # Preview production build
 ```
 
-## 3. Project Structure & Separation of Concerns
+## 4. Project Structure & Separation of Concerns
 
 Keep modules strictly organized by responsibility:
 
 ```text
-├── .github/workflows/ci.yml    # CI pipeline: typecheck, lint, fmt:check, test, build
+├── .github/workflows/
+│   ├── ci.yml                  # CI pipeline: typecheck, lint, fmt:check, test, build
+│   └── deploy-pages.yml        # GitHub Pages subpath PWA deployment
+├── docs/
+│   ├── ROADMAP.md              # Multiphase feature & quality guardrail roadmap
+│   └── ADR/                    # Architecture Decision Records
 ├── index.html                  # Minimal PWA HTML shell mounting #app
 ├── public/icon.svg             # Scalable PWA & favicon icon
 ├── tsconfig.json               # Strict TypeScript config (jsxImportSource: "preact")
@@ -41,10 +60,11 @@ Keep modules strictly organized by responsibility:
 ├── vitest.config.ts            # Vitest + happy-dom configuration
 ├── src/
 │   ├── main.tsx                # Preact entrypoint mounting <App />
-│   ├── styles/main.css         # Tailwind v4 entry, @theme tokens, spotlight styles
+│   ├── styles/main.css         # Tailwind v4 entry, @theme tokens, spotlights, overflow guard
 │   ├── domain/
-│   │   ├── schema.ts           # Versioned TS types (AppDataV3), validators, v2 -> v3 migration
-│   │   ├── defaults.ts         # Default dumbbell exercises, warm-up/cool-down, routine factories
+│   │   ├── schema.ts           # Versioned TS types (AppDataV3), tags, validators, migrations
+│   │   ├── defaults.ts         # Default exercises, warm-up/cool-down, routine factories
+│   │   ├── presets.ts          # Tagged exercise catalog & varied workout circuit builder
 │   │   └── timeline.ts         # Pure timeline builder, duration calculation, MM:SS formatting
 │   ├── engine/
 │   │   ├── animations.ts       # Pure typed 60 FPS SVG pose registry & easing math
@@ -59,42 +79,45 @@ Keep modules strictly organized by responsibility:
 │   └── components/
 │       ├── App.tsx             # Root shell, keyboard shortcuts, modal coordination
 │       ├── HeaderBar.tsx       # Compact mobile-first timer pill, transport & audio/voice toggles
-│       ├── WorkoutStage.tsx    # Active/preview exercise stage, pace controls, form cues, Up Next
+│       ├── WorkoutStage.tsx    # Active/preview exercise stage, New Workout bar, form cues, Up Next
 │       ├── AthleteSvg.tsx      # 60 FPS ref-driven SVG renderer (zero per-frame Preact re-renders)
 │       ├── RoutineSidebar.tsx  # Exercise list controls (preview, reorder, toggle, edit, delete, backup)
 │       ├── ToastHost.tsx       # Accessible live-region toast notifications
 │       └── modals/
-│           ├── ModalDialog.tsx # Accessible dialog wrapper (Escape, backdrop click, ARIA)
-│           ├── ExerciseModal.tsx
+│           ├── ModalDialog.tsx     # Accessible dialog wrapper (Escape, backdrop click, ARIA)
+│           ├── NewWorkoutModal.tsx # 1-screen duration + muscle group workout builder with Shuffle
+│           ├── ExerciseModal.tsx   # Add/Edit exercise with animation, equipment & tag chips
 │           ├── SettingsModal.tsx
 │           └── HistoryModal.tsx
 └── tests/
-    ├── schema.test.ts          # Schema validation, v2 -> v3 migration, corrupt storage recovery
+    ├── schema.test.ts          # Schema validation, v2 -> v3 migration, tag inference, corrupt recovery
+    ├── presets.test.ts         # Tag filtering, variation/shuffle, custom exercises, duration accuracy
     ├── timeline.test.ts        # Timeline ordering, overrides, formatting
     ├── timer.test.ts           # Wall-clock sleep/drift recovery, pause/resume, completion guards
-    ├── animations.test.ts      # Math helpers & viewBox invariants across all animations
+    ├── animations.test.ts      # Math helpers, supination & viewBox invariants across all animations
     └── app.component.test.tsx  # Preact integration tests
 ```
 
-## 4. Architectural Guidelines & Conventions
+## 5. Architectural Guidelines & Conventions
 
 1. **Keep Domain & Engine Logic Pure & Testable**:
-   - Everything in `src/domain/` and `src/engine/` must remain free of DOM (`document`/`window`) dependencies so it can be tested directly and deterministically in Vitest.
+   - Everything in `src/domain/` and `src/engine/` must remain free of DOM (`document`/`window`) and UI (`preact`) dependencies so it can be tested directly and deterministically in Vitest.
 2. **Never Trigger 60 FPS Preact Re-Renders**:
-   - `AthleteSvg.tsx` mutates SVG element refs directly inside `requestAnimationFrame` and pauses while `document.hidden`. Keep per-frame animation math inside `src/engine/animations.ts`.
+   - `AthleteSvg.tsx` (and future `Stage3D.tsx`) mutates refs/GPU buffers directly inside `requestAnimationFrame` and pauses while `document.hidden`. Keep per-frame animation math inside `src/engine/`.
 3. **Preserve Offline-First Persistence & Backwards Compatibility**:
    - All persistence goes through the `StorageAdapter` interface in `src/services/storage.ts`.
-   - Any future schema evolution must increment `SCHEMA_VERSION` in `src/domain/schema.ts` and preserve automatic migration from prior versions and JSON backups.
-4. **Adding a New 60 FPS Exercise Animation**:
-   - Add the new key to `ANIMATION_IDS` in `src/domain/schema.ts`.
-   - Implement its entry in `ANIMATION_REGISTRY` in `src/engine/animations.ts` (`ANIMATION_OPTIONS` and the Exercise Modal `<select>` update automatically, and `tests/animations.test.ts` automatically validates its pose bounds).
-5. **Respect Accessibility & Mobile Workout Ergonomics**:
+   - Any schema evolution must increment `SCHEMA_VERSION` in `src/domain/schema.ts` and preserve automatic lossless migration from all prior versions and JSON backups.
+4. **Adding a New Exercise or Animation**:
+   - Animations: add the new key to `ANIMATION_IDS` in `src/domain/schema.ts` and implement its entry in `ANIMATION_REGISTRY` in `src/engine/animations.ts` (`ANIMATION_OPTIONS`, `ExerciseModal`, and `tests/animations.test.ts` update automatically).
+   - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations` (and `requiredEquipment` + `styles` once Phase 3 lands), ≥ 3 clear steps, and a concise `tip`.
+5. **Respect Narrow Mobile & Foldable Ergonomics**:
+   - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow**. Always add `min-w-0` on CSS Grid/Flex children with truncating content.
    - Modals must use `ModalDialog.tsx` (`role="dialog"`, `aria-modal`, `Escape` and backdrop dismiss).
    - Keep transport buttons touch-friendly and keyboard shortcuts disabled while typing in form fields or when modals are open.
 
-## 5. Verification Checklist Before Finishing Changes
+## 6. Verification Checklist Before Finishing Changes
 
-Run all five checks before wrapping up any change:
+Run all checks (with 0 errors and 0 lint warnings) before committing or opening a PR:
 
 ```bash
 pnpm typecheck
