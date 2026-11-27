@@ -15,8 +15,9 @@ Before implementing any feature or fix:
    - [`0003-foldable-flex-mode-layout.md`](docs/ADR/0003-foldable-flex-mode-layout.md) — Galaxy Z Flip Flex / Floor Mode split contract
    - [`0004-spaces-equipment-and-workout-styles.md`](docs/ADR/0004-spaces-equipment-and-workout-styles.md) — Workout Spaces, equipment tags, and Pilates/Mobility styles
    - [`0005-shadcn-base-ui-component-primitives.md`](docs/ADR/0005-shadcn-base-ui-component-primitives.md) — Standardize interactive UI primitives with `shadcn` + Base UI (`src/components/ui/`)
+   - [`0006-conventional-commits-semver-releases.md`](docs/ADR/0006-conventional-commits-semver-releases.md) — Conventional Commit PR titles & automated SemVer tags/releases
 3. Check [`docs/EXCEPTIONS.md`](docs/EXCEPTIONS.md) before flagging or refactoring minor style/lint exceptions so already-approved 1-off exceptions are never re-reported.
-4. Ship every phase or fix on a feature branch via pull request (never push directly to `main`), updating `docs/ROADMAP.md` when a phase completes.
+4. Ship every phase or fix on a feature branch via pull request (never push directly to `main`) using a **Conventional Commit PR title** (`feat(scope): ...`, `fix(scope): ...`, `docs: ...`), updating `docs/ROADMAP.md` when a phase completes.
 
 ### Rule Compliance, Exceptions & Escalation Protocol
 
@@ -67,8 +68,9 @@ Keep modules strictly organized by responsibility:
 
 ```text
 ├── .github/workflows/
-│   ├── ci.yml                  # CI pipeline: typecheck, lint, fmt:check, test, build
-│   └── deploy-pages.yml        # GitHub Pages subpath PWA deployment
+│   ├── ci.yml                  # CI pipeline: PR title check, typecheck, lint, fmt, test, build, E2E
+│   ├── deploy-pages.yml        # GitHub Pages subpath PWA deployment with live version stamp
+│   └── release.yml             # Automated Conventional Commits SemVer git tag & GitHub Release
 ├── docs/
 │   ├── ROADMAP.md              # Multiphase feature & quality guardrail roadmap
 │   ├── EXCEPTIONS.md           # Approved 1-off trivial exceptions (do not re-flag)
@@ -76,7 +78,8 @@ Keep modules strictly organized by responsibility:
 ├── e2e/
 │   └── mobile-and-flows.spec.ts # Playwright 360px/390px/1280px zero-overflow & core E2E flows
 ├── scripts/
-│   └── check-bundle-budget.mjs # Initial entry JS/CSS gzipped bundle budget gate
+│   ├── check-bundle-budget.mjs # Initial entry JS/CSS gzipped bundle budget gate
+│   └── semver.mjs              # Zero-dep Conventional Commits validator & SemVer calculator
 ├── index.html                  # Minimal PWA HTML shell mounting #app
 ├── public/icon.svg             # Scalable PWA & favicon icon
 ├── tsconfig.json               # Strict TypeScript config (jsxImportSource: "preact")

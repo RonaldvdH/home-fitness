@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import { preact } from '@preact/preset-vite';
@@ -10,10 +11,28 @@ function resolveBasePath(rawBase: string | undefined): string {
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 }
 
+function resolveAppVersion(): string {
+  const fromEnv = process.env.VITE_APP_VERSION?.trim();
+  if (fromEnv) return fromEnv;
+  try {
+    const tag = execSync('git describe --tags --abbrev=0', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+    if (tag) return tag;
+  } catch {
+    // Fallback when git metadata is unavailable
+  }
+  return 'v0.2.0';
+}
+
 const base = resolveBasePath(process.env.VITE_BASE_PATH);
+const appVersion = resolveAppVersion();
 
 export default defineConfig({
   base,
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
