@@ -14,6 +14,7 @@ Before implementing any feature or fix:
    - [`0002-procedural-3d-mannequin-demonstrator.md`](docs/ADR/0002-procedural-3d-mannequin-demonstrator.md) — Procedural Three.js 3D mannequin + 2D SVG fallback
    - [`0003-foldable-flex-mode-layout.md`](docs/ADR/0003-foldable-flex-mode-layout.md) — Galaxy Z Flip Flex / Floor Mode split contract
    - [`0004-spaces-equipment-and-workout-styles.md`](docs/ADR/0004-spaces-equipment-and-workout-styles.md) — Workout Spaces, equipment tags, and Pilates/Mobility styles
+   - [`0005-shadcn-base-ui-component-primitives.md`](docs/ADR/0005-shadcn-base-ui-component-primitives.md) — Standardize interactive UI primitives with `shadcn` + Base UI (`src/components/ui/`)
 3. Check [`docs/EXCEPTIONS.md`](docs/EXCEPTIONS.md) before flagging or refactoring minor style/lint exceptions so already-approved 1-off exceptions are never re-reported.
 4. Ship every phase or fix on a feature branch via pull request (never push directly to `main`), updating `docs/ROADMAP.md` when a phase completes.
 
@@ -138,8 +139,11 @@ Keep modules strictly organized by responsibility:
    - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations` (and `requiredEquipment` + `styles` once Phase 3 lands), ≥ 3 clear steps, and a concise `tip` (enforced by `tests/catalog.contract.test.ts`).
 5. **Respect Narrow Mobile & Foldable Ergonomics**:
    - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow** (enforced by `e2e/mobile-and-flows.spec.ts`). Always add `min-w-0` on CSS Grid/Flex children with truncating content.
-   - Modals must use `ModalDialog.tsx` (`role="dialog"`, `aria-modal`, `Escape` and backdrop dismiss; enforced by `tests/architecture.test.ts`).
+   - Modals must use the shared dialog primitive (`ModalDialog.tsx`, migrating to `shadcn` + Base UI `Dialog` per [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md); enforced by `tests/architecture.test.ts`).
    - Keep transport buttons touch-friendly and keyboard shortcuts disabled while typing in form fields or when modals are open.
+6. **Standardize Interactive UI Primitives (`shadcn` + Base UI)**:
+   - Use **`shadcn` + Base UI (`@base-ui/react`)** in `src/components/ui/` for all reusable interactive primitives (dialogs, drawers/sheets, switches, selects, tabs, toggle groups, popovers, toasts).
+   - **Only build a component from scratch when it does not exist in the library**, and follow `shadcn` + Base UI conventions as closely as possible (composable parts, `cn()` class merging, `data-slot`/`data-state` hooks, accessible ARIA/keyboard contracts; see [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md)).
 
 ## 6. Verification Checklist Before Finishing Changes
 

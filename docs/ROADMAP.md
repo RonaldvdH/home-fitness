@@ -34,6 +34,8 @@ Because this repository is AI-developed and hosted on GitHub's free tier:
 3. **Strict Architecture, Pragmatic Exceptions**:
    - Enforce architectural boundaries strictly; allow documented 1-off trivial exceptions in [`docs/EXCEPTIONS.md`](./EXCEPTIONS.md) so future AI agents never repeatedly re-flag decided items.
    - Follow the 3-option resolution protocol in [`AGENTS.md`](../AGENTS.md): **1. Refactor to comply** -> **2. Document new pattern or approved 1-off exception** -> **3. Stop & escalate recurring friction**.
+4. **Standardized UI Primitives (`shadcn` + Base UI)**:
+   - Never hand-roll reusable interactive primitives (dialogs, sheets, switches, selects, tabs, toggle groups); generate them via `shadcn` + Base UI into `src/components/ui/` per [`ADR-0005`](./ADR/0005-shadcn-base-ui-component-primitives.md).
 
 ---
 
