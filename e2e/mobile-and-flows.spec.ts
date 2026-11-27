@@ -85,15 +85,35 @@ test('Galaxy Z Flip core workout flow: New Workout -> Shuffle -> Start -> Pause 
   await expect(page.getByTestId('phase-badge')).toHaveText('WORK');
   await expectZeroHorizontalOverflow(page, '360x800 active WORK step');
 
-  // Non-destructive preview of an exercise from RoutineSidebar
+  // Verify Exercise Header uses full width (no cramped half-column wrapping) & single-line badge
+  const headerBox = await page.getByTestId('exercise-header').boundingBox();
+  const titleBox = await page.getByTestId('active-exercise-title').boundingBox();
+  const badgeBox = await page.getByTestId('exercise-equipment-badge').boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(badgeBox).not.toBeNull();
+  expect(titleBox!.width).toBeGreaterThanOrEqual(headerBox!.width * 0.8);
+  expect(badgeBox!.height).toBeLessThanOrEqual(28);
+
+  // Non-destructive preview of an exercise from RoutineSidebar + single-row preview banner check
   const secondExerciseBtn = page.locator('aside button').filter({ hasText: /^2\./ }).first();
   await secondExerciseBtn.click();
-  await expect(page.getByRole('button', { name: 'Back to Workout' })).toBeVisible();
-  await page.getByRole('button', { name: 'Back to Workout' }).click();
+  const backBtn = page.getByRole('button', { name: 'Back to Workout' });
+  await expect(backBtn).toBeVisible();
+  const previewBannerBox = await backBtn.locator('..').boundingBox();
+  expect(previewBannerBox).not.toBeNull();
+  expect(previewBannerBox!.height).toBeLessThanOrEqual(48);
+  await backBtn.click();
   await expect(page.getByTestId('step-counter')).toContainText('2/');
 
+  // Verify RoutineSidebar header keeps title and Add Exercise button on one row
+  const addExBtn = page.getByRole('button', { name: 'Add Exercise' });
+  const sidebarHeaderBox = await addExBtn.locator('..').boundingBox();
+  expect(sidebarHeaderBox).not.toBeNull();
+  expect(sidebarHeaderBox!.height).toBeLessThanOrEqual(52);
+
   // Open Add Exercise modal and dismiss with Escape
-  await page.getByRole('button', { name: 'Add Exercise' }).click();
+  await addExBtn.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectZeroHorizontalOverflow(page, '360x800 Add Exercise modal');
   await page.keyboard.press('Escape');
