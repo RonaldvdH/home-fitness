@@ -2,12 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/pr
 import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../src/components/App';
 import { createDefaultAppData } from '../src/domain/defaults';
-import type { AppDataV3 } from '../src/domain/schema';
+import type { AppDataV4 } from '../src/domain/schema';
 import { createFoldableController } from '../src/services/foldable';
 import type { StorageAdapter } from '../src/services/storage';
 import { createWorkoutStore } from '../src/state/workoutStore';
 
-function createMemoryAdapter(initial?: AppDataV3): StorageAdapter {
+function createMemoryAdapter(initial?: AppDataV4): StorageAdapter {
   let stored = initial ?? createDefaultAppData('2026-01-01T00:00:00.000Z');
   return {
     load: () => structuredClone(stored),
@@ -165,6 +165,34 @@ describe('<App /> integration flows', () => {
     expect(screen.getByTestId('step-counter').textContent?.startsWith('2/')).toBe(true);
 
     foldable.destroy();
+    store.destroy();
+  });
+
+  it('switches Workout Space to Travel in New Workout overlay and excludes all dumbbell exercises', async () => {
+    const store = createWorkoutStore({ storage: createMemoryAdapter() });
+    render(<App store={store} />);
+
+    fireEvent.click(screen.getByText('New Workout'));
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Travel' }));
+    expect(screen.getByTestId('active-space-equipment-summary').textContent).not.toContain('DB');
+
+    fireEvent.click(screen.getByText('Upper Body'));
+    fireEvent.click(screen.getByText('Load & Preview'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    expect(store.getState().activeSpace.id).toBe('space-travel');
+    const loaded = store.getState().activeRoutine.exercises;
+    expect(loaded.length).toBeGreaterThanOrEqual(4);
+    for (const ex of loaded) {
+      expect(ex.equipment.kind).not.toBe('dumbbells');
+      expect(ex.requiredEquipment).not.toContain('dumbbells');
+    }
+
     store.destroy();
   });
 });

@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
+  EQUIPMENT_TAG_LABELS,
+  EQUIPMENT_TAGS,
   inferMuscleGroupTags,
   MUSCLE_GROUP_TAGS,
   WORKOUT_DURATIONS,
   type AnimationId,
+  type EquipmentTag,
   type Exercise,
   type MuscleGroupTag,
   type WorkoutDurationMin,
@@ -34,6 +37,9 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
   const [durations, setDurations] = useState<WorkoutDurationMin[]>(() =>
     editingExercise ? [...editingExercise.durations] : [...WORKOUT_DURATIONS],
   );
+  const [requiredEquipment, setRequiredEquipment] = useState<EquipmentTag[]>(() =>
+    editingExercise ? [...editingExercise.requiredEquipment] : ['dumbbells'],
+  );
   const [equipmentLabel, setEquipmentLabel] = useState(
     () => editingExercise?.equipment.label ?? '2x 5kg Dumbbells',
   );
@@ -56,6 +62,7 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
       setMuscleGroup(editingExercise.muscleGroup);
       setMuscleGroups([...editingExercise.muscleGroups]);
       setDurations([...editingExercise.durations]);
+      setRequiredEquipment([...editingExercise.requiredEquipment]);
       setEquipmentLabel(editingExercise.equipment.label);
       setAnimationType(editingExercise.animationType);
       setStep1(editingExercise.steps[0] ?? '');
@@ -67,6 +74,7 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
       setMuscleGroup('');
       setMuscleGroups(['upper']);
       setDurations([...WORKOUT_DURATIONS]);
+      setRequiredEquipment(['dumbbells']);
       setEquipmentLabel('2x 5kg Dumbbells');
       setAnimationType('overhead-press');
       setStep1('');
@@ -95,6 +103,16 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
     });
   };
 
+  const toggleEquipmentTag = (tag: EquipmentTag): void => {
+    setRequiredEquipment((prev) => {
+      if (prev.includes(tag)) {
+        return prev.filter((item) => item !== tag);
+      }
+      const next = new Set([...prev, tag]);
+      return EQUIPMENT_TAGS.filter((t) => next.has(t));
+    });
+  };
+
   const handleSubmit = (event: SubmitEvent): void => {
     event.preventDefault();
     if (!name.trim() || !muscleGroup.trim()) return;
@@ -105,6 +123,7 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
       muscleGroup,
       muscleGroups,
       durations,
+      requiredEquipment,
       equipment: equipmentLabel.trim() || '2x 5kg Dumbbells',
       animationType,
       steps: [step1, step2, step3].filter((step) => step.trim().length > 0),
@@ -240,6 +259,35 @@ export function ExerciseModal({ open, editingExercise, onClose, onSave }: Exerci
             placeholder="e.g., 2x 5kg Dumbbells • Standing"
             class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-emerald-500"
           />
+        </div>
+
+        <div>
+          <span class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Required Equipment (Space Filter)
+          </span>
+          <div class="flex flex-wrap gap-1.5">
+            {EQUIPMENT_TAGS.map((tag) => {
+              const active = requiredEquipment.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleEquipmentTag(tag)}
+                  class={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition ${
+                    active
+                      ? 'bg-emerald-500/15 border-emerald-400 text-emerald-300'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {EQUIPMENT_TAG_LABELS[tag]}
+                </button>
+              );
+            })}
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">
+            Leave empty for standing bodyweight exercises eligible in every Space.
+          </p>
         </div>
 
         <div>

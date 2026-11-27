@@ -1,6 +1,6 @@
 /**
  * Encapsulated reactive workout store.
- * Coordinates persisted AppDataV3, timeline derivation, wall-clock timer,
+ * Coordinates persisted AppDataV4, Workout Spaces, timeline derivation, wall-clock timer,
  * non-destructive exercise preview, audio/voice cues, Wake Lock, and toasts.
  */
 
@@ -11,9 +11,13 @@ import {
   normalizeDurationTags,
   normalizeEquipment,
   normalizeMuscleGroupTags,
+  normalizeRequiredEquipment,
+  normalizeWorkoutSpace,
+  normalizeWorkoutStyles,
   type AnimationId,
-  type AppDataV3,
+  type AppDataV4,
   type EquipmentSpec,
+  type EquipmentTag,
   type Exercise,
   type MuscleGroupTag,
   type Routine,
@@ -21,6 +25,8 @@ import {
   type TimelineStep,
   type WorkoutDurationMin,
   type WorkoutSettings,
+  type WorkoutSpace,
+  type WorkoutStyle,
 } from '../domain/schema';
 import { buildCircuitTimeline, computeTotalDuration } from '../domain/timeline';
 import {
@@ -53,15 +59,25 @@ export interface ExerciseFormInput {
   muscleGroup: string;
   muscleGroups?: MuscleGroupTag[];
   durations?: WorkoutDurationMin[];
+  requiredEquipment?: EquipmentTag[];
+  styles?: WorkoutStyle[];
   equipment?: EquipmentSpec | string;
   animationType: AnimationId;
   steps: string[];
   tip: string;
 }
 
+export interface SpaceFormInput {
+  id?: string;
+  name: string;
+  availableEquipment: EquipmentTag[];
+  dumbbellWeightKg: number;
+}
+
 export interface WorkoutStoreState {
-  data: AppDataV3;
+  data: AppDataV4;
   activeRoutine: Routine;
+  activeSpace: WorkoutSpace;
   timeline: TimelineStep[];
   totalDurationSec: number;
   timer: TimerSnapshot;
@@ -97,6 +113,9 @@ export interface WorkoutStore {
   deleteExercise: (exerciseId: string) => void;
   restoreDefaultExercises: () => void;
   applyWorkoutPreset: (preset: GeneratedWorkoutPreset, options?: { autoStart?: boolean }) => void;
+  selectSpace: (spaceId: string) => void;
+  saveSpace: (input: SpaceFormInput) => WorkoutSpace | null;
+  deleteSpace: (spaceId: string) => void;
   updateSettings: (next: Partial<WorkoutSettings>) => void;
   toggleSound: () => void;
   toggleVoice: () => void;
@@ -111,14 +130,19 @@ export interface WorkoutStore {
   destroy: () => void;
 }
 
-function getActiveRoutine(data: AppDataV3): Routine {
+function getActiveRoutine(data: AppDataV4): Routine {
   return data.routines.find((r) => r.id === data.activeRoutineId) ?? data.routines[0]!;
+}
+
+function getActiveSpace(data: AppDataV4): WorkoutSpace {
+  return data.spaces.find((s) => s.id === data.activeSpaceId) ?? data.spaces[0]!;
 }
 
 export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): WorkoutStore {
   const storage = deps.storage ?? createLocalStorageAdapter();
   let data = storage.load();
   let activeRoutine = getActiveRoutine(data);
+  let activeSpace = getActiveSpace(data);
 
   const audio = deps.audio ?? createAudioCoach(activeRoutine.settings.soundEnabled);
   const voice = deps.voice ?? createVoiceCoach(activeRoutine.settings.voiceEnabled);
@@ -138,6 +162,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
     return {
       data,
       activeRoutine,
+      activeSpace,
       timeline,
       totalDurationSec,
       timer: timerSnap,
@@ -372,6 +397,17 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
         trimmedMuscles,
       );
       const durations = normalizeDurationTags(input.durations ?? existing?.durations);
+      const requiredEquipment = normalizeRequiredEquipment(
+        input.requiredEquipment ?? existing?.requiredEquipment,
+        equipment,
+        input.animationType,
+      );
+      const styles = normalizeWorkoutStyles(
+        input.styles ?? existing?.styles,
+        equipment,
+        input.animationType,
+        trimmedMuscles,
+      );
 
       const nextExercise: Exercise = {
         id: existing ? existing.id : `ex-${Date.now()}`,
@@ -379,6 +415,8 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
         muscleGroup: trimmedMuscles,
         muscleGroups,
         durations,
+        requiredEquipment,
+        styles,
         equipment,
         animationType: input.animationType,
         active: existing ? existing.active : true,
@@ -450,6 +488,14 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
     },
 
     applyWorkoutPreset(preset: GeneratedWorkoutPreset, options?: { autoStart?: boolean }) {
+      if (preset.exercises.length === 0) {
+        pushToast('No exercises matched this Space and filter combination.', 'error');
+        return;
+      }
+      if (preset.spaceId && data.spaces.some((s) => s.id === preset.spaceId)) {
+        data = { ...data, activeSpaceId: preset.spaceId };
+        activeSpace = getActiveSpace(data);
+      }
       updateActiveRoutine((routine) => ({
         ...routine,
         name: preset.routineName,
@@ -462,6 +508,71 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       } else {
         pushToast(`Loaded ${preset.routineName}.`, 'success');
       }
+    },
+
+    selectSpace(spaceId: string) {
+      const target = data.spaces.find((s) => s.id === spaceId);
+      if (!target || target.id === data.activeSpaceId) return;
+      data = { ...data, activeSpaceId: target.id };
+      activeSpace = target;
+      persistData();
+      notify();
+    },
+
+    saveSpace(input: SpaceFormInput): WorkoutSpace | null {
+      const existing = input.id ? data.spaces.find((s) => s.id === input.id) : undefined;
+      const normalized = normalizeWorkoutSpace(
+        {
+          id: existing ? existing.id : `space-${Date.now()}`,
+          name: input.name,
+          availableEquipment: input.availableEquipment,
+          dumbbellWeightKg: input.dumbbellWeightKg,
+        },
+        data.spaces.length,
+      );
+      if (!normalized) {
+        pushToast('Please enter a name for your workout space.', 'error');
+        return null;
+      }
+
+      const spaces = existing
+        ? data.spaces.map((s) => (s.id === existing.id ? normalized : s))
+        : [...data.spaces, normalized];
+
+      data = {
+        ...data,
+        spaces,
+        activeSpaceId: normalized.id,
+      };
+      activeSpace = normalized;
+      persistData();
+      notify();
+      pushToast(
+        existing ? `Updated "${normalized.name}".` : `Added "${normalized.name}" space.`,
+        'success',
+      );
+      return normalized;
+    },
+
+    deleteSpace(spaceId: string) {
+      if (data.spaces.length <= 1) {
+        pushToast('Keep at least one workout space.', 'error');
+        return;
+      }
+      const target = data.spaces.find((s) => s.id === spaceId);
+      if (!target) return;
+
+      const spaces = data.spaces.filter((s) => s.id !== spaceId);
+      const nextActiveId = data.activeSpaceId === spaceId ? spaces[0]!.id : data.activeSpaceId;
+      data = {
+        ...data,
+        spaces,
+        activeSpaceId: nextActiveId,
+      };
+      activeSpace = getActiveSpace(data);
+      persistData();
+      notify();
+      pushToast(`Removed "${target.name}" space.`);
     },
 
     updateSettings(next: Partial<WorkoutSettings>) {
@@ -540,6 +651,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
 
       data = result.data;
       activeRoutine = getActiveRoutine(data);
+      activeSpace = getActiveSpace(data);
       audio.setEnabled(activeRoutine.settings.soundEnabled);
       voice.setEnabled(activeRoutine.settings.voiceEnabled);
       timeline = buildCircuitTimeline(activeRoutine.exercises, activeRoutine.settings);

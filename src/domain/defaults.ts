@@ -1,13 +1,36 @@
 import {
   DEFAULT_SETTINGS,
   SCHEMA_VERSION,
-  type AppDataV3,
+  type AppDataV4,
   type Exercise,
   type Routine,
+  type WorkoutSpace,
 } from './schema';
 
 export const DEFAULT_ROUTINE_ID = 'routine-dumbbell-upper';
 export const DEFAULT_ROUTINE_NAME = '5kg Dumbbell Upper Circuit';
+export const DEFAULT_SPACE_ID = 'space-home-gym';
+
+export const DEFAULT_SPACES: readonly WorkoutSpace[] = [
+  {
+    id: 'space-home-gym',
+    name: 'Home Gym',
+    availableEquipment: ['dumbbells', 'bands', 'wall', 'floor', 'foam-roller'],
+    dumbbellWeightKg: 5,
+  },
+  {
+    id: 'space-living-room',
+    name: 'Living Room',
+    availableEquipment: ['bands', 'wall', 'floor', 'foam-roller'],
+    dumbbellWeightKg: 5,
+  },
+  {
+    id: 'space-travel',
+    name: 'Travel',
+    availableEquipment: ['wall', 'floor'],
+    dumbbellWeightKg: 5,
+  },
+];
 
 export const DEFAULT_EXERCISES: readonly Exercise[] = [
   {
@@ -16,6 +39,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     muscleGroup: 'Shoulders (Deltoids) • Triceps',
     muscleGroups: ['upper'],
     durations: [10, 15, 20],
+    requiredEquipment: ['dumbbells'],
+    styles: ['strength'],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -37,6 +62,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     muscleGroup: 'Upper & Mid-Back • Rear Delts',
     muscleGroups: ['upper'],
     durations: [10, 15, 20],
+    requiredEquipment: ['dumbbells'],
+    styles: ['strength'],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -58,6 +85,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     muscleGroup: 'Chest (Pectorals) • Triceps',
     muscleGroups: ['upper'],
     durations: [10, 15, 20],
+    requiredEquipment: ['dumbbells', 'floor'],
+    styles: ['strength'],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -79,6 +108,8 @@ export const DEFAULT_EXERCISES: readonly Exercise[] = [
     muscleGroup: 'Biceps • Forearms',
     muscleGroups: ['upper'],
     durations: [10, 15, 20],
+    requiredEquipment: ['dumbbells'],
+    styles: ['strength'],
     equipment: {
       kind: 'dumbbells',
       weightKg: 5,
@@ -102,6 +133,8 @@ export const WARMUP_ITEM: Exercise = {
   muscleGroup: 'Shoulders • Thoracic Spine • Elbows',
   muscleGroups: ['upper', 'lower', 'abs'],
   durations: [10, 15, 20],
+  requiredEquipment: [],
+  styles: ['mobility'],
   equipment: {
     kind: 'bodyweight',
     label: 'Bodyweight Mobility',
@@ -122,6 +155,8 @@ export const COOLDOWN_ITEM: Exercise = {
   muscleGroup: 'Deltoids • Chest • Biceps',
   muscleGroups: ['upper', 'lower', 'abs'],
   durations: [10, 15, 20],
+  requiredEquipment: [],
+  styles: ['mobility'],
   equipment: {
     kind: 'bodyweight',
     label: 'Recovery Stretch',
@@ -140,6 +175,10 @@ export function cloneDefaultExercises(): Exercise[] {
   return structuredClone(DEFAULT_EXERCISES) as Exercise[];
 }
 
+export function cloneDefaultSpaces(): WorkoutSpace[] {
+  return structuredClone(DEFAULT_SPACES) as WorkoutSpace[];
+}
+
 export function createDefaultRoutine(nowIso = new Date().toISOString()): Routine {
   return {
     id: DEFAULT_ROUTINE_ID,
@@ -150,12 +189,15 @@ export function createDefaultRoutine(nowIso = new Date().toISOString()): Routine
   };
 }
 
-export function createDefaultAppData(nowIso = new Date().toISOString()): AppDataV3 {
+export function createDefaultAppData(nowIso = new Date().toISOString()): AppDataV4 {
   const routine = createDefaultRoutine(nowIso);
+  const spaces = cloneDefaultSpaces();
   return {
     schemaVersion: SCHEMA_VERSION,
     activeRoutineId: routine.id,
     routines: [routine],
+    spaces,
+    activeSpaceId: DEFAULT_SPACE_ID,
     history: [],
   };
 }

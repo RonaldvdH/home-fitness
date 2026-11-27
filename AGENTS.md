@@ -87,9 +87,9 @@ Keep modules strictly organized by responsibility:
 │   ├── main.tsx                # Preact entrypoint mounting <App />
 │   ├── styles/main.css         # Tailwind v4 entry, @theme tokens, spotlights, overflow guard
 │   ├── domain/
-│   │   ├── schema.ts           # Versioned TS types (AppDataV3), tags, validators, migrations
-│   │   ├── defaults.ts         # Default exercises, warm-up/cool-down, routine factories
-│   │   ├── presets.ts          # Tagged exercise catalog & varied workout circuit builder
+│   │   ├── schema.ts           # Versioned TS types (AppDataV4), WorkoutSpace, tags, migrations
+│   │   ├── defaults.ts         # Default Spaces, exercises, warm-up/cool-down, routine factories
+│   │   ├── presets.ts          # Tagged exercise catalog (dumbbells/bands/wall/floor/roller) & builder
 │   │   └── timeline.ts         # Pure timeline builder, duration calculation, MM:SS formatting
 │   ├── engine/
 │   │   ├── animations.ts       # Pure typed 60 FPS SVG pose registry & easing math
@@ -101,7 +101,7 @@ Keep modules strictly organized by responsibility:
 │   │   ├── wakeLock.ts         # Screen Wake Lock API wrapper with visibilitychange re-acquire
 │   │   └── foldable.ts         # Viewport Segments Flex Mode detection + manual Floor Mode controller
 │   ├── state/
-│   │   └── workoutStore.ts     # Encapsulated reactive store wiring data, timer, preview, services
+│   │   └── workoutStore.ts     # Encapsulated reactive store wiring data, Spaces, timer, services
 │   └── components/
 │       ├── App.tsx             # Root shell, keyboard shortcuts, Floor Mode & modal coordination
 │       ├── HeaderBar.tsx       # Compact mobile-first timer pill, transport, Floor Mode & audio/voice toggles
@@ -114,17 +114,18 @@ Keep modules strictly organized by responsibility:
 │       │   └── dialog.tsx      # shadcn + Base UI Dialog primitive (@base-ui/react/dialog)
 │       └── modals/
 │           ├── ModalDialog.tsx     # Shared modal shell composing @/components/ui/dialog
-│           ├── NewWorkoutModal.tsx # 1-screen duration + muscle group workout builder with Shuffle
+│           ├── NewWorkoutModal.tsx # 1-screen Space + duration + muscle group builder with Shuffle
+│           ├── SpacesModal.tsx     # Add/Edit/Delete Workout Spaces & dumbbell weights
 │           ├── ExerciseModal.tsx   # Add/Edit exercise with animation, equipment & tag chips
 │           ├── SettingsModal.tsx
 │           └── HistoryModal.tsx
 └── tests/
     ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync
-    ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & preset matrix checks
+    ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & Space matrix checks
     ├── foldable.test.ts        # Viewport Segments auto-detection & manual Floor Mode state machine
     ├── modal-dialog.test.tsx   # Base UI Dialog rendering, close button & Escape dismissal
-    ├── schema.test.ts          # Schema validation, v2 -> v3 migration, tag inference, corrupt recovery
-    ├── presets.test.ts         # Tag filtering, variation/shuffle, custom exercises, duration accuracy
+    ├── schema.test.ts          # Schema v4 validation, v2/v3 -> v4 migration, Space & tag inference
+    ├── presets.test.ts         # Space equipment filtering, weight substitution, shuffle & durations
     ├── timeline.test.ts        # Timeline ordering, overrides, formatting
     ├── timer.test.ts           # Wall-clock sleep/drift recovery, pause/resume, completion guards
     ├── animations.test.ts      # Math helpers, supination & viewBox invariants across all animations
@@ -142,7 +143,7 @@ Keep modules strictly organized by responsibility:
    - Any schema evolution must increment `SCHEMA_VERSION` in `src/domain/schema.ts` and preserve automatic lossless migration from all prior versions and JSON backups.
 4. **Adding a New Exercise or Animation**:
    - Animations: add the new key to `ANIMATION_IDS` in `src/domain/schema.ts` and implement its entry in `ANIMATION_REGISTRY` in `src/engine/animations.ts` (`ANIMATION_OPTIONS`, `ExerciseModal`, and `tests/animations.test.ts` update automatically).
-   - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations` (and `requiredEquipment` + `styles` once Phase 3 lands), ≥ 3 clear steps, and a concise `tip` (enforced by `tests/catalog.contract.test.ts`).
+   - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations`, `requiredEquipment`, `styles`, ≥ 3 clear steps, and a concise `tip` (enforced by `tests/catalog.contract.test.ts`).
 5. **Respect Narrow Mobile & Foldable Ergonomics**:
    - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow** (enforced by `e2e/mobile-and-flows.spec.ts`). Always add `min-w-0` on CSS Grid/Flex children with truncating content.
    - Modals must use the shared dialog primitive (`ModalDialog.tsx`, migrating to `shadcn` + Base UI `Dialog` per [`ADR-0005`](docs/ADR/0005-shadcn-base-ui-component-primitives.md); enforced by `tests/architecture.test.ts`).

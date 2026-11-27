@@ -1,6 +1,6 @@
 # ADR-0004: Named Workout Spaces, Equipment Tags, and Workout Styles (Pilates Ready)
 
-- **Status**: Accepted (Planned for Phases 3 & 5)
+- **Status**: Accepted (Spaces & Equipment implemented in Phase 3; Workout Styles UI planned for Phase 5)
 - **Date**: 2026-11-26
 
 ## Context

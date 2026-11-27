@@ -57,7 +57,8 @@ export function buildCircuitTimeline(
       if (!isLastOfFinalRound) {
         const nextEx =
           idx + 1 < activeExercises.length ? activeExercises[idx + 1]! : activeExercises[0]!;
-        const isWeighted = nextEx.equipment.kind !== 'bodyweight';
+        const isWeighted =
+          nextEx.equipment.kind === 'dumbbells' || nextEx.equipment.kind === 'kettlebell';
 
         list.push({
           phase: 'REST',
@@ -70,6 +71,8 @@ export function buildCircuitTimeline(
             muscleGroup: `Next: ${nextEx.muscleGroup}`,
             muscleGroups: [...nextEx.muscleGroups],
             durations: [...nextEx.durations],
+            requiredEquipment: [...nextEx.requiredEquipment],
+            styles: [...nextEx.styles],
             equipment: nextEx.equipment,
             animationType: nextEx.animationType,
             active: true,

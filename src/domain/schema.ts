@@ -1,9 +1,9 @@
 /**
- * Versioned domain schemas, runtime normalizers, and v2 -> v3 migration helpers.
+ * Versioned domain schemas (AppDataV4), runtime normalizers, and v2/v3 -> v4 migration helpers.
  * Pure TypeScript module with zero DOM or storage side effects.
  */
 
-export const SCHEMA_VERSION = 3 as const;
+export const SCHEMA_VERSION = 4 as const;
 
 export const ANIMATION_IDS = [
   'overhead-press',
@@ -21,6 +21,19 @@ export const ANIMATION_IDS = [
   'leg-raise',
   'russian-twist',
   'plank-tap',
+  'band-pull-apart',
+  'band-row',
+  'band-kickback',
+  'wall-sit',
+  'wall-pushup',
+  'wall-angels',
+  'push-up',
+  'bird-dog',
+  'dead-bug',
+  'superman',
+  'roller-thoracic',
+  'roller-quad',
+  'roller-glute',
 ] as const;
 
 export type AnimationId = (typeof ANIMATION_IDS)[number];
@@ -33,7 +46,30 @@ export type MuscleGroupTag = (typeof MUSCLE_GROUP_TAGS)[number];
 
 export type TargetMuscleGroup = MuscleGroupTag | 'full';
 
-export type EquipmentKind = 'dumbbells' | 'bodyweight' | 'kettlebell' | 'bands';
+export const EQUIPMENT_TAGS = [
+  'dumbbells',
+  'bands',
+  'wall',
+  'floor',
+  'foam-roller',
+  'kettlebell',
+] as const;
+
+export type EquipmentTag = (typeof EQUIPMENT_TAGS)[number];
+
+export const EQUIPMENT_TAG_LABELS: Record<EquipmentTag, string> = {
+  dumbbells: 'Dumbbells',
+  bands: 'Elastic Bands',
+  wall: 'Wall',
+  floor: 'Floor / Mat',
+  'foam-roller': 'Foam Roller',
+  kettlebell: 'Kettlebell',
+};
+
+export const WORKOUT_STYLES = ['strength', 'pilates', 'mobility'] as const;
+export type WorkoutStyle = (typeof WORKOUT_STYLES)[number];
+
+export type EquipmentKind = 'dumbbells' | 'bodyweight' | 'kettlebell' | 'bands' | 'foam-roller';
 
 export interface EquipmentSpec {
   kind: EquipmentKind;
@@ -42,12 +78,21 @@ export interface EquipmentSpec {
   label: string;
 }
 
+export interface WorkoutSpace {
+  id: string;
+  name: string;
+  availableEquipment: EquipmentTag[];
+  dumbbellWeightKg: number;
+}
+
 export interface Exercise {
   id: string;
   name: string;
   muscleGroup: string;
   muscleGroups: MuscleGroupTag[];
   durations: WorkoutDurationMin[];
+  requiredEquipment: EquipmentTag[];
+  styles: WorkoutStyle[];
   equipment: EquipmentSpec;
   animationType: AnimationId;
   active: boolean;
@@ -88,10 +133,12 @@ export interface SessionRecord {
   source: SessionSource;
 }
 
-export interface AppDataV3 {
+export interface AppDataV4 {
   schemaVersion: typeof SCHEMA_VERSION;
   activeRoutineId: string;
   routines: Routine[];
+  spaces: WorkoutSpace[];
+  activeSpaceId: string;
   history: SessionRecord[];
 }
 
@@ -123,9 +170,47 @@ const EQUIPMENT_KINDS: ReadonlySet<string> = new Set<EquipmentKind>([
   'bodyweight',
   'kettlebell',
   'bands',
+  'foam-roller',
 ]);
 
 const ANIMATION_ID_SET: ReadonlySet<string> = new Set<string>(ANIMATION_IDS);
+const EQUIPMENT_TAG_SET: ReadonlySet<string> = new Set<string>(EQUIPMENT_TAGS);
+const WORKOUT_STYLE_SET: ReadonlySet<string> = new Set<string>(WORKOUT_STYLES);
+
+const FLOOR_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
+  'floor-press',
+  'glute-bridge',
+  'crunch',
+  'leg-raise',
+  'russian-twist',
+  'plank-tap',
+  'band-kickback',
+  'push-up',
+  'bird-dog',
+  'dead-bug',
+  'superman',
+  'roller-thoracic',
+  'roller-quad',
+  'roller-glute',
+]);
+
+const WALL_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
+  'wall-sit',
+  'wall-pushup',
+  'wall-angels',
+]);
+
+const ROLLER_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
+  'roller-thoracic',
+  'roller-quad',
+  'roller-glute',
+]);
+
+const BAND_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
+  'band-pull-apart',
+  'band-row',
+  'band-kickback',
+]);
 
 export function isAnimationId(value: unknown): value is AnimationId {
   return typeof value === 'string' && ANIMATION_ID_SET.has(value);
@@ -145,6 +230,13 @@ function clampFloat(value: unknown, min: number, max: number, fallback: number):
   const num = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(num)) return fallback;
   return Math.min(max, Math.max(min, num));
+}
+
+function clampDumbbellWeight(value: unknown, fallback = 5): number {
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num) || num <= 0) return fallback;
+  const clamped = Math.min(50, Math.max(1, num));
+  return Math.round(clamped * 2) / 2;
 }
 
 function parseNonEmptyString(value: unknown, fallback = ''): string {
@@ -179,7 +271,9 @@ export function normalizeEquipment(raw: unknown): EquipmentSpec {
           ? `${count ?? 2}x ${rawWeight ?? 5}kg Dumbbells`
           : kind === 'kettlebell'
             ? `${rawWeight ?? 8}kg Kettlebell`
-            : 'Resistance Bands';
+            : kind === 'foam-roller'
+              ? 'Foam Roller • Floor / Mat'
+              : 'Resistance Bands';
     const label = parseNonEmptyString(raw.label, defaultLabel);
     return {
       kind,
@@ -196,7 +290,15 @@ export function normalizeEquipment(raw: unknown): EquipmentSpec {
   if (typeof raw === 'string' && raw.trim().length > 0) {
     const label = raw.trim();
     const lower = label.toLowerCase();
-    if (lower.includes('bodyweight') || lower.includes('stretch') || lower.includes('mobility')) {
+    if (lower.includes('foam roller') || lower.includes('roller')) {
+      return { kind: 'foam-roller', label };
+    }
+    if (
+      lower.includes('bodyweight') ||
+      lower.includes('stretch') ||
+      lower.includes('mobility') ||
+      lower.includes('wall')
+    ) {
       return { kind: 'bodyweight', label };
     }
     if (lower.includes('kettlebell')) {
@@ -229,6 +331,169 @@ export function normalizeEquipment(raw: unknown): EquipmentSpec {
   };
 }
 
+export function inferRequiredEquipment(
+  equipment: EquipmentSpec,
+  animationType: AnimationId,
+): EquipmentTag[] {
+  const tags = new Set<EquipmentTag>();
+  const lowerLabel = equipment.label.toLowerCase();
+
+  if (equipment.kind === 'dumbbells') tags.add('dumbbells');
+  if (
+    equipment.kind === 'bands' ||
+    BAND_ANIMATIONS.has(animationType) ||
+    lowerLabel.includes('band')
+  ) {
+    tags.add('bands');
+  }
+  if (equipment.kind === 'kettlebell' || lowerLabel.includes('kettlebell')) {
+    tags.add('kettlebell');
+  }
+  if (
+    equipment.kind === 'foam-roller' ||
+    ROLLER_ANIMATIONS.has(animationType) ||
+    lowerLabel.includes('roller')
+  ) {
+    tags.add('foam-roller');
+  }
+  if (WALL_ANIMATIONS.has(animationType) || /\bwall\b/.test(lowerLabel)) {
+    tags.add('wall');
+  }
+  if (FLOOR_ANIMATIONS.has(animationType) || /\b(floor|mat)\b/.test(lowerLabel)) {
+    tags.add('floor');
+  }
+
+  return EQUIPMENT_TAGS.filter((tag) => tags.has(tag));
+}
+
+export function normalizeRequiredEquipment(
+  raw: unknown,
+  equipment: EquipmentSpec,
+  animationType: AnimationId,
+): EquipmentTag[] {
+  if (Array.isArray(raw)) {
+    const selected = new Set(
+      raw.filter(
+        (item): item is EquipmentTag => typeof item === 'string' && EQUIPMENT_TAG_SET.has(item),
+      ),
+    );
+    return EQUIPMENT_TAGS.filter((tag) => selected.has(tag));
+  }
+  return inferRequiredEquipment(equipment, animationType);
+}
+
+export function inferWorkoutStyles(
+  equipment: EquipmentSpec,
+  animationType: AnimationId,
+  muscleGroupLabel = '',
+): WorkoutStyle[] {
+  const styles = new Set<WorkoutStyle>();
+  const lower = `${equipment.label} ${muscleGroupLabel}`.toLowerCase();
+
+  if (
+    equipment.kind === 'foam-roller' ||
+    ROLLER_ANIMATIONS.has(animationType) ||
+    animationType === 'wall-angels' ||
+    /mobility|stretch|release|recovery/.test(lower)
+  ) {
+    styles.add('mobility');
+  }
+
+  if (
+    animationType === 'glute-bridge' ||
+    animationType === 'bird-dog' ||
+    animationType === 'dead-bug' ||
+    animationType === 'superman' ||
+    animationType === 'leg-raise' ||
+    animationType === 'crunch' ||
+    animationType === 'wall-angels' ||
+    animationType === 'band-kickback' ||
+    /pilates/.test(lower)
+  ) {
+    styles.add('pilates');
+  }
+
+  if (styles.size === 0 || !ROLLER_ANIMATIONS.has(animationType)) {
+    if (!/stretch|recovery/.test(lower)) {
+      styles.add('strength');
+    }
+  }
+
+  return WORKOUT_STYLES.filter((style) => styles.has(style));
+}
+
+export function normalizeWorkoutStyles(
+  raw: unknown,
+  equipment: EquipmentSpec,
+  animationType: AnimationId,
+  muscleGroupLabel = '',
+): WorkoutStyle[] {
+  if (Array.isArray(raw)) {
+    const selected = new Set(
+      raw.filter(
+        (item): item is WorkoutStyle => typeof item === 'string' && WORKOUT_STYLE_SET.has(item),
+      ),
+    );
+    const valid = WORKOUT_STYLES.filter((style) => selected.has(style));
+    if (valid.length > 0) return valid;
+  }
+  return inferWorkoutStyles(equipment, animationType, muscleGroupLabel);
+}
+
+export function normalizeWorkoutSpace(raw: unknown, index = 0): WorkoutSpace | null {
+  if (!isRecord(raw)) return null;
+  const name = parseNonEmptyString(raw.name);
+  if (!name) return null;
+
+  const id = parseNonEmptyString(raw.id, `space-${index + 1}`);
+  const rawEquipment = Array.isArray(raw.availableEquipment) ? raw.availableEquipment : [];
+  const selected = new Set(
+    rawEquipment.filter(
+      (item): item is EquipmentTag => typeof item === 'string' && EQUIPMENT_TAG_SET.has(item),
+    ),
+  );
+  const availableEquipment = EQUIPMENT_TAGS.filter((tag) => selected.has(tag));
+  const dumbbellWeightKg = clampDumbbellWeight(raw.dumbbellWeightKg, 5);
+
+  return {
+    id,
+    name,
+    availableEquipment,
+    dumbbellWeightKg,
+  };
+}
+
+export function isExerciseEligibleForSpace(exercise: Exercise, space: WorkoutSpace): boolean {
+  if (exercise.requiredEquipment.length === 0) return true;
+  const available = new Set<EquipmentTag>(space.availableEquipment);
+  return exercise.requiredEquipment.every((tag) => available.has(tag));
+}
+
+/**
+ * Substitute the active Space's dumbbell weight into dumbbell exercises so weight badges,
+ * animated SVG labels, and form cues reflect the user's real hardware.
+ */
+export function applySpaceToExercise(exercise: Exercise, space: WorkoutSpace): Exercise {
+  if (exercise.equipment.kind !== 'dumbbells') {
+    return structuredClone(exercise) as Exercise;
+  }
+
+  const weightKg = clampDumbbellWeight(space.dumbbellWeightKg, exercise.equipment.weightKg ?? 5);
+  const next = structuredClone(exercise) as Exercise;
+  const weightPattern = /\b\d+(?:\.\d+)?kg\b/gi;
+
+  next.equipment = {
+    ...next.equipment,
+    weightKg,
+    label: weightPattern.test(next.equipment.label)
+      ? next.equipment.label.replace(weightPattern, `${weightKg}kg`)
+      : `${next.equipment.count ?? 2}x ${weightKg}kg Dumbbells`,
+  };
+  next.steps = next.steps.map((step) => step.replace(weightPattern, `${weightKg}kg`));
+  next.tip = next.tip.replace(weightPattern, `${weightKg}kg`);
+  return next;
+}
+
 const MUSCLE_GROUP_TAG_SET: ReadonlySet<string> = new Set<string>(MUSCLE_GROUP_TAGS);
 const WORKOUT_DURATION_SET: ReadonlySet<number> = new Set<number>(WORKOUT_DURATIONS);
 
@@ -244,7 +509,11 @@ export function inferMuscleGroupTags(
     animationType === 'rdl' ||
     animationType === 'reverse-lunge' ||
     animationType === 'glute-bridge' ||
-    /quad|glute|hamstring|leg|calf|lower/.test(lower)
+    animationType === 'band-kickback' ||
+    animationType === 'wall-sit' ||
+    animationType === 'roller-quad' ||
+    animationType === 'roller-glute' ||
+    /quad|glute|hamstring|leg|calf|lower|it-band/.test(lower)
   ) {
     inferred.add('lower');
   }
@@ -253,6 +522,9 @@ export function inferMuscleGroupTags(
     animationType === 'leg-raise' ||
     animationType === 'russian-twist' ||
     animationType === 'plank-tap' ||
+    animationType === 'bird-dog' ||
+    animationType === 'dead-bug' ||
+    animationType === 'superman' ||
     /abs|core|oblique/.test(lower)
   ) {
     inferred.add('abs');
@@ -265,7 +537,13 @@ export function inferMuscleGroupTags(
     animationType === 'lateral-raise' ||
     animationType === 'front-raise' ||
     animationType === 'tricep-extension' ||
-    /shoulder|delt|chest|pec|back|lat|bicep|tricep|arm|upper/.test(lower)
+    animationType === 'band-pull-apart' ||
+    animationType === 'band-row' ||
+    animationType === 'wall-pushup' ||
+    animationType === 'wall-angels' ||
+    animationType === 'push-up' ||
+    animationType === 'roller-thoracic' ||
+    /shoulder|delt|chest|pec|back|lat|bicep|tricep|arm|upper|thoracic/.test(lower)
   ) {
     inferred.add('upper');
   }
@@ -319,6 +597,12 @@ export function normalizeExercise(raw: unknown, index = 0): Exercise | null {
     : 'overhead-press';
   const muscleGroups = normalizeMuscleGroupTags(raw.muscleGroups, animationType, muscleGroup);
   const durations = normalizeDurationTags(raw.durations);
+  const requiredEquipment = normalizeRequiredEquipment(
+    raw.requiredEquipment,
+    equipment,
+    animationType,
+  );
+  const styles = normalizeWorkoutStyles(raw.styles, equipment, animationType, muscleGroup);
   const active = typeof raw.active === 'boolean' ? raw.active : true;
 
   const rawSteps = Array.isArray(raw.steps)
@@ -348,6 +632,8 @@ export function normalizeExercise(raw: unknown, index = 0): Exercise | null {
     muscleGroup,
     muscleGroups,
     durations,
+    requiredEquipment,
+    styles,
     equipment,
     animationType,
     active,
@@ -441,21 +727,29 @@ export function normalizeRoutine(
 }
 
 export type ParseImportResult =
-  | { ok: true; data: AppDataV3; migratedFromV2: boolean }
+  | { ok: true; data: AppDataV4; migratedFromVersion?: 2 | 3 }
   | { ok: false; error: string };
 
 /**
  * Validate and normalize imported or stored app data.
- * Accepts v3 envelopes, legacy v2 `{ exercises, settings, history }`, or bare exercise arrays.
+ * Accepts v4 envelopes, v3 envelopes, legacy v2 `{ exercises, settings, history }`,
+ * or bare exercise arrays, preserving all user data across lossless migrations.
  */
-export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImportResult {
+export function parseAppData(raw: unknown, fallbackData: AppDataV4): ParseImportResult {
   const defaultRoutine = fallbackData.routines[0];
   if (!defaultRoutine) {
     return { ok: false, error: 'Missing default routine template.' };
   }
 
-  // Case 1: v3 structured envelope
-  if (isRecord(raw) && raw.schemaVersion === SCHEMA_VERSION && Array.isArray(raw.routines)) {
+  const fallbackSpaces = structuredClone(fallbackData.spaces) as WorkoutSpace[];
+  const fallbackSpaceId = fallbackData.activeSpaceId || fallbackSpaces[0]?.id || 'space-home-gym';
+
+  // Case 1: v4 or v3 structured envelope
+  if (
+    isRecord(raw) &&
+    (raw.schemaVersion === SCHEMA_VERSION || raw.schemaVersion === 3) &&
+    Array.isArray(raw.routines)
+  ) {
     const routines = raw.routines
       .map((item, idx) => normalizeRoutine(item, defaultRoutine, idx))
       .filter((item): item is Routine => item !== null);
@@ -477,13 +771,28 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImport
       .filter((entry): entry is SessionRecord => entry !== null)
       .slice(0, MAX_HISTORY_RECORDS);
 
+    const parsedSpaces = Array.isArray(raw.spaces)
+      ? raw.spaces
+          .map((item, idx) => normalizeWorkoutSpace(item, idx))
+          .filter((item): item is WorkoutSpace => item !== null)
+      : [];
+    const spaces = parsedSpaces.length > 0 ? parsedSpaces : fallbackSpaces;
+    const activeSpaceId =
+      typeof raw.activeSpaceId === 'string' && spaces.some((s) => s.id === raw.activeSpaceId)
+        ? raw.activeSpaceId
+        : (spaces[0]?.id ?? fallbackSpaceId);
+
+    const isV3 = raw.schemaVersion === 3;
+
     return {
       ok: true,
-      migratedFromV2: false,
+      ...(isV3 ? { migratedFromVersion: 3 as const } : {}),
       data: {
         schemaVersion: SCHEMA_VERSION,
         activeRoutineId,
         routines,
+        spaces,
+        activeSpaceId,
         history,
       },
     };
@@ -512,7 +821,7 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImport
 
     return {
       ok: true,
-      migratedFromV2: true,
+      migratedFromVersion: 2,
       data: {
         schemaVersion: SCHEMA_VERSION,
         activeRoutineId: defaultRoutine.id,
@@ -524,6 +833,8 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImport
             updatedAt: new Date().toISOString(),
           },
         ],
+        spaces: fallbackSpaces,
+        activeSpaceId: fallbackSpaceId,
         history,
       },
     };
@@ -541,7 +852,7 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImport
 
     return {
       ok: true,
-      migratedFromV2: true,
+      migratedFromVersion: 2,
       data: {
         schemaVersion: SCHEMA_VERSION,
         activeRoutineId: defaultRoutine.id,
@@ -552,6 +863,8 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV3): ParseImport
             updatedAt: new Date().toISOString(),
           },
         ],
+        spaces: fallbackSpaces,
+        activeSpaceId: fallbackSpaceId,
         history: [...fallbackData.history],
       },
     };

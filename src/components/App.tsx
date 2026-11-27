@@ -31,6 +31,9 @@ const NewWorkoutModal = lazy(() =>
 const SettingsModal = lazy(() =>
   import('./modals/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
+const SpacesModal = lazy(() =>
+  import('./modals/SpacesModal').then((m) => ({ default: m.SpacesModal })),
+);
 
 export interface AppProps {
   store?: WorkoutStore;
@@ -54,13 +57,19 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
   const [floorMode, setFloorMode] = useState<FloorModeSnapshot>(() => foldable.getSnapshot());
 
   const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
+  const [spacesModalOpen, setSpacesModalOpen] = useState(false);
+  const [returnToNewWorkout, setReturnToNewWorkout] = useState(false);
   const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const anyModalOpen =
-    newWorkoutModalOpen || exerciseModalOpen || settingsModalOpen || historyModalOpen;
+    newWorkoutModalOpen ||
+    spacesModalOpen ||
+    exerciseModalOpen ||
+    settingsModalOpen ||
+    historyModalOpen;
 
   useEffect(() => {
     setState(store.getState());
@@ -263,8 +272,34 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
             open={newWorkoutModalOpen}
             currentSettings={state.activeRoutine.settings}
             userExercises={state.activeRoutine.exercises}
+            spaces={state.data.spaces}
+            activeSpace={state.activeSpace}
+            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
+            onManageSpaces={() => {
+              setReturnToNewWorkout(true);
+              setNewWorkoutModalOpen(false);
+              setSpacesModalOpen(true);
+            }}
             onClose={() => setNewWorkoutModalOpen(false)}
             onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
+          />
+        )}
+
+        {spacesModalOpen && (
+          <SpacesModal
+            open={spacesModalOpen}
+            spaces={state.data.spaces}
+            activeSpaceId={state.activeSpace.id}
+            onClose={() => {
+              setSpacesModalOpen(false);
+              if (returnToNewWorkout) {
+                setReturnToNewWorkout(false);
+                setNewWorkoutModalOpen(true);
+              }
+            }}
+            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
+            onSaveSpace={(input) => store.saveSpace(input)}
+            onDeleteSpace={(spaceId) => store.deleteSpace(spaceId)}
           />
         )}
 
