@@ -20,35 +20,50 @@ This document is the authoritative, repo-resident development roadmap for **Home
 
 ---
 
+## Operational Principles: Token, Build-Minute & Rule Efficiency
+
+Because this repository is AI-developed and hosted on GitHub's free tier:
+
+1. **Shift-Left & Zero-Token Rule Checking**:
+   - Enforce architectural rules with deterministic scripts and Vitest tests (`pnpm typecheck`, `pnpm lint`, `pnpm fmt:check`, `pnpm test`, `pnpm check:budget`) rather than repetitive manual LLM audits.
+   - AI agents must run fast local checks before pushing so GitHub Actions is never burned on trial-and-error retries.
+2. **GitHub Actions Build-Minute Efficiency**:
+   - Cancel superseded CI runs automatically (`concurrency: { cancel-in-progress: true }`).
+   - Skip full build/deploy CI on pure documentation edits (`docs/**`, `README.md`, `AGENTS.md`).
+   - Cache `pnpm` store and Playwright Chromium binaries (`~/.cache/ms-playwright`), install **Chromium only** (`--project=chromium`), and run Playwright only when UI/layout/E2E paths change.
+3. **Strict Architecture, Pragmatic Exceptions**:
+   - Enforce architectural boundaries strictly; allow documented 1-off trivial exceptions in [`docs/EXCEPTIONS.md`](./EXCEPTIONS.md) so future AI agents never repeatedly re-flag decided items.
+   - Follow the 3-option resolution protocol in [`AGENTS.md`](../AGENTS.md): **1. Refactor to comply** -> **2. Document new pattern or approved 1-off exception** -> **3. Stop & escalate recurring friction**.
+
+---
+
 ## Phase 1 — AI Quality Guardrail Foundation
 
 ### Goal & User Value
 
-Make the repository self-governing so every future AI-authored feature automatically preserves mobile layout integrity (Galaxy Z Flip unfolded ~360px), runtime performance, architectural purity, and data safety without relying on manual human QA for regressions.
+Make the repository self-governing so every future AI-authored feature automatically validates architectural compliance, mobile layout integrity (Galaxy Z Flip unfolded ~360px), and bundle efficiency—while minimizing CI build minutes and AI token overhead.
 
 ### Scope
 
 1. **Strict Zero-Warning Lint Policy**:
    - Update `pnpm lint` to `oxlint --deny-warnings` so warnings cannot accumulate across AI PRs.
-2. **Architectural Boundary Tests** (`tests/architecture.test.ts`):
-   - Automated static check asserting files inside `src/domain/` and `src/engine/` never import from `src/components/`, `src/services/`, `src/state/`, `preact`, or reference `window` / `document` / `localStorage`.
+2. **Automated Architectural & Repo-Rule Tests** (`tests/architecture.test.ts`):
+   - Deterministic Vitest check enforcing repo rules on every PR at zero LLM token cost:
+     - `src/domain/` and `src/engine/` never import from `src/components/`, `src/services/`, `src/state/`, or `preact`, and never reference DOM/storage globals (`window`, `document`, `localStorage`).
+     - Supports explicit documented allowlist references (`EX-xxx` in [`docs/EXCEPTIONS.md`](./EXCEPTIONS.md)) only for approved non-architectural exceptions.
 3. **Catalog & Tag Contract Tests** (`tests/catalog.contract.test.ts`):
    - Validate every built-in exercise has a unique `id`, valid `animationType`, non-empty `muscleGroups` and `durations`, ≥ 3 non-empty `steps`, and a non-empty `tip`.
-4. **Playwright E2E & Mobile Overflow Suite** (`e2e/` + `playwright.config.ts` + CI job):
-   - Boot the built Vite preview app in Chromium and assert:
-     - Zero console errors and zero uncaught page errors.
-     - **Zero horizontal overflow** (`document.documentElement.scrollWidth <= window.innerWidth`) at:
-       - Galaxy Z Flip unfolded (`360×800`)
-       - Standard phone (`390×844`)
-       - Desktop (`1280×800`)
-     - Core user journeys: open **New Workout** overlay -> pick duration + muscle group -> shuffle -> start workout -> pause -> preview exercise -> back to workout -> open/close modals with `Escape`.
+4. **Build-Minute-Efficient Playwright E2E & Mobile Overflow Suite** (`e2e/` + `playwright.config.ts` + CI job):
+   - Chromium-only (`--project=chromium`), with cached Playwright browser binary in CI and path filtering so E2E runs only when UI/styles/HTML/E2E/config files change.
+   - Asserts zero console/page errors, **zero horizontal overflow** (`document.documentElement.scrollWidth <= window.innerWidth`) at Galaxy Z Flip unfolded (`360×800`), standard phone (`390×844`), and desktop (`1280×800`), plus core New Workout + preview + modal flows.
 5. **Bundle Size Budget Check** (`scripts/check-bundle-budget.mjs`):
-   - Verify after `pnpm build` that the initial entry JS chunk stays under a strict gzipped ceiling (e.g., `<= 55 kB` gzip for the initial bundle, ensuring future heavy modules like Three.js MUST be lazy-loaded in a separate async chunk).
+   - Verify after `pnpm build` that the initial entry JS chunk stays under a strict gzipped ceiling (`<= 55 kB` gzip), forcing heavy Phase 4 subsystems (Three.js) to stay lazy-loaded in an async chunk.
 
 ### Mandatory Guardrails & Definition of Done
 
-- `pnpm typecheck`, `pnpm lint` (`--deny-warnings`), `pnpm fmt:check`, `pnpm test`, `pnpm build`, `pnpm check:budget`, and `pnpm test:e2e` all pass locally and in `.github/workflows/ci.yml`.
-- Any layout change that causes horizontal scroll on a 360px viewport fails CI automatically.
+- Fast local gate (`pnpm check`: `typecheck` + `lint --deny-warnings` + `fmt:check` + `test` + `build` + `check:budget`) runs in seconds and passes with 0 errors and 0 warnings.
+- `pnpm test:e2e` passes in CI when UI paths change, with cached Chromium and `cancel-in-progress: true` enabled.
+- Any layout change causing horizontal scroll on a 360px viewport or violating pure-domain boundaries fails CI automatically.
 
 ---
 

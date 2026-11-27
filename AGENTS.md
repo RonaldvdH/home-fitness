@@ -14,7 +14,22 @@ Before implementing any feature or fix:
    - [`0002-procedural-3d-mannequin-demonstrator.md`](docs/ADR/0002-procedural-3d-mannequin-demonstrator.md) — Procedural Three.js 3D mannequin + 2D SVG fallback
    - [`0003-foldable-flex-mode-layout.md`](docs/ADR/0003-foldable-flex-mode-layout.md) — Galaxy Z Flip Flex / Floor Mode split contract
    - [`0004-spaces-equipment-and-workout-styles.md`](docs/ADR/0004-spaces-equipment-and-workout-styles.md) — Workout Spaces, equipment tags, and Pilates/Mobility styles
-3. Ship every phase or fix on a feature branch via pull request (never push directly to `main`), updating `docs/ROADMAP.md` when a phase completes.
+3. Check [`docs/EXCEPTIONS.md`](docs/EXCEPTIONS.md) before flagging or refactoring minor style/lint exceptions so already-approved 1-off exceptions are never re-reported.
+4. Ship every phase or fix on a feature branch via pull request (never push directly to `main`), updating `docs/ROADMAP.md` when a phase completes.
+
+### Rule Compliance, Exceptions & Escalation Protocol
+
+Be **strict** on architectural boundaries (pure domain/engine, schema migrations, 60 FPS non-re-rendering stage, 360px zero-overflow mobile layout, bundle budget) and **pragmatic** on trivial syntax preferences. Whenever code conflicts with a repo rule or guideline, follow these 3 options in order:
+
+1. **Refactor code to comply** — Default action for architectural, correctness, and straightforward quality violations.
+2. **Document new pattern or approved 1-off exception** — If introducing a valid new architectural concept/pattern, document it in [`docs/ADR/`](docs/ADR/) and `AGENTS.md`. If making a justified trivial 1-off exception (never for core architectural invariants), record a concise entry in [`docs/EXCEPTIONS.md`](docs/EXCEPTIONS.md) with rationale and a revisit trigger so future AI agents do not re-report it.
+3. **Stop & escalate recurring friction** — If the same violation or guideline tension **keeps coming back** across changes, **stop coding**, explain to the user _why_ it keeps recurring, and present concrete options (e.g., refactor the underlying abstraction, adjust the rule, or formalize a new pattern) before proceeding.
+
+### Token & GitHub Actions Build-Minute Efficiency
+
+- **Run fast local checks before pushing** (`pnpm typecheck && pnpm lint && pnpm fmt:check && pnpm test && pnpm build`) so GitHub Actions is never burned on trial-and-error retries.
+- **Prefer automated checks over prose**: codify enforceable rules in Vitest/oxlint/scripts rather than long manual instructions.
+- **Keep docs concise**: write terse, scannable ADRs, roadmap entries, and exception rows to minimize token load for future agent sessions.
 
 ## 2. Project Overview & Tech Stack
 
@@ -52,6 +67,7 @@ Keep modules strictly organized by responsibility:
 │   └── deploy-pages.yml        # GitHub Pages subpath PWA deployment
 ├── docs/
 │   ├── ROADMAP.md              # Multiphase feature & quality guardrail roadmap
+│   ├── EXCEPTIONS.md           # Approved 1-off trivial exceptions (do not re-flag)
 │   └── ADR/                    # Architecture Decision Records
 ├── index.html                  # Minimal PWA HTML shell mounting #app
 ├── public/icon.svg             # Scalable PWA & favicon icon
