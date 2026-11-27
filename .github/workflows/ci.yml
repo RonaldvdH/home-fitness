@@ -18,9 +18,28 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    outputs:
+      run_e2e: ${{ steps.detect.outputs.run_e2e }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect UI / E2E / build-config changes
+        id: detect
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          if echo "$CHANGED" | grep -qE '^(src/components/|src/styles/|index\.html|e2e/|playwright\.config\.ts|vite\.config\.ts|package\.json|\.github/workflows/ci\.yml)'; then
+            echo "run_e2e=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_e2e=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,14 +56,62 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Lint (oxlint)
+      - name: Lint (oxlint --deny-warnings)
         run: pnpm lint
 
       - name: Format check (oxfmt)
         run: pnpm fmt:check
 
-      - name: Test
+      - name: Unit, contract & architecture tests
         run: pnpm test
 
       - name: Build
         run: pnpm build
+
+      - name: Bundle size budget check
+        run: pnpm check:budget
+
+  e2e:
+    needs: verify
+    if: needs.verify.outputs.run_e2e == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve Playwright version for cache key
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright Chromium browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium browser (cached when unchanged)
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" != "true" ]; then
+            pnpm exec playwright install --with-deps chromium
+          else
+            pnpm exec playwright install-deps chromium
+          fi
+
+      - name: Build production bundle
+        run: pnpm build
+
+      - name: Run Playwright mobile & overflow E2E tests
+        run: pnpm test:e2e
