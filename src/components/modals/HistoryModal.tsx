@@ -31,9 +31,17 @@ export function HistoryModal({ open, history, onClose, onLogManualSession }: His
       onClose={onClose}
     >
       <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 mb-5">
-        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 block">
-          Offline-First Persistence
-        </span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">
+            Offline-First Persistence
+          </span>
+          <span
+            data-testid="app-version-badge"
+            class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 font-mono text-[11px] font-semibold text-slate-300 shrink-0"
+          >
+            {import.meta.env.VITE_APP_VERSION ?? 'dev'}
+          </span>
+        </div>
         <p class="text-sm font-semibold text-white mt-0.5">Saved automatically on this device</p>
         <p class="text-xs text-slate-400 mt-1 leading-relaxed">
           Your exercises, timer settings, and workout history stay stored in browser storage and

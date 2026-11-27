@@ -3,6 +3,9 @@ import { defineConfig } from 'vitest/config';
 import { preact } from '@preact/preset-vite';
 
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify('v0.0.0-test'),
+  },
   resolve: {
     alias: [
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },

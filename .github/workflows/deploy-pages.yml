@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -43,12 +45,28 @@ jobs:
           pnpm fmt:check
           pnpm test
 
+      - name: Resolve live app version
+        id: version
+        shell: bash
+        run: |
+          EXACT_TAG=$(git tag --points-at HEAD --list 'v*.*.*' | head -n 1)
+          if [ -n "$EXACT_TAG" ]; then
+            echo "app_version=$EXACT_TAG" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CURRENT_TAG=$(git tag --list 'v*.*.*' --sort=-v:refname | head -n 1)
+          CURRENT_TAG="${CURRENT_TAG:-v0.0.0}"
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          NEXT_TAG=$(node -e "import('./scripts/semver.mjs').then(m => console.log(m.computeNextVersion(process.argv[1], process.argv[2]).next))" "$CURRENT_TAG" "$COMMIT_MSG")
+          echo "app_version=$NEXT_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Build for GitHub Pages
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_APP_VERSION: ${{ steps.version.outputs.app_version }}
         run: |
           pnpm build
           pnpm check:budget
