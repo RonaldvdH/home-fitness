@@ -19,11 +19,14 @@ pnpm dev
 ### Verification Commands
 
 ```bash
-pnpm typecheck   # Strict TypeScript check
-pnpm lint        # oxlint
-pnpm fmt:check   # oxfmt formatting check
-pnpm test        # Vitest unit & Preact component tests
-pnpm build       # Production PWA build
+pnpm check        # Full local gate (typecheck, lint, fmt:check, test, build, check:budget)
+pnpm typecheck    # Strict TypeScript check
+pnpm lint         # oxlint --deny-warnings
+pnpm fmt:check    # oxfmt formatting check
+pnpm test         # Vitest unit, contract, architecture & Preact component tests
+pnpm build        # Production PWA build
+pnpm check:budget # Enforce initial entry JS/CSS gzipped bundle budgets
+pnpm test:e2e     # Playwright Chromium mobile overflow & flow E2E tests
 ```
 
 ## Deploying & Installing on Android (GitHub Pages)

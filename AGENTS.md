@@ -47,13 +47,16 @@ Be **strict** on architectural boundaries (pure domain/engine, schema migrations
 ```bash
 pnpm install        # Install dependencies
 pnpm dev            # Start Vite dev server
+pnpm check          # Fast full local gate: typecheck, lint, fmt:check, test, build, check:budget
 pnpm typecheck      # Run strict TypeScript typecheck (tsc --noEmit)
-pnpm lint           # Run oxlint across the repository
+pnpm lint           # Run oxlint --deny-warnings across the repository
 pnpm fmt            # Auto-format files with oxfmt
 pnpm fmt:check      # Check formatting without modifying files
-pnpm test           # Run unit & component tests once (vitest run)
+pnpm test           # Run unit, contract, architecture & component tests (vitest run)
 pnpm test:watch     # Run tests in watch mode
 pnpm build          # Production PWA build to dist/
+pnpm check:budget   # Enforce initial entry JS/CSS gzipped bundle-size budgets
+pnpm test:e2e       # Run Playwright Chromium mobile overflow & flow tests against dist/
 pnpm preview        # Preview production build
 ```
 
@@ -69,11 +72,16 @@ Keep modules strictly organized by responsibility:
 │   ├── ROADMAP.md              # Multiphase feature & quality guardrail roadmap
 │   ├── EXCEPTIONS.md           # Approved 1-off trivial exceptions (do not re-flag)
 │   └── ADR/                    # Architecture Decision Records
+├── e2e/
+│   └── mobile-and-flows.spec.ts # Playwright 360px/390px/1280px zero-overflow & core E2E flows
+├── scripts/
+│   └── check-bundle-budget.mjs # Initial entry JS/CSS gzipped bundle budget gate
 ├── index.html                  # Minimal PWA HTML shell mounting #app
 ├── public/icon.svg             # Scalable PWA & favicon icon
 ├── tsconfig.json               # Strict TypeScript config (jsxImportSource: "preact")
 ├── vite.config.ts              # Vite + Preact + Tailwind v4 + vite-plugin-pwa
 ├── vitest.config.ts            # Vitest + happy-dom configuration
+├── playwright.config.ts        # Chromium-only Playwright E2E configuration
 ├── src/
 │   ├── main.tsx                # Preact entrypoint mounting <App />
 │   ├── styles/main.css         # Tailwind v4 entry, @theme tokens, spotlights, overflow guard
@@ -106,6 +114,8 @@ Keep modules strictly organized by responsibility:
 │           ├── SettingsModal.tsx
 │           └── HistoryModal.tsx
 └── tests/
+    ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync
+    ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & preset matrix checks
     ├── schema.test.ts          # Schema validation, v2 -> v3 migration, tag inference, corrupt recovery
     ├── presets.test.ts         # Tag filtering, variation/shuffle, custom exercises, duration accuracy
     ├── timeline.test.ts        # Timeline ordering, overrides, formatting
@@ -117,28 +127,25 @@ Keep modules strictly organized by responsibility:
 ## 5. Architectural Guidelines & Conventions
 
 1. **Keep Domain & Engine Logic Pure & Testable**:
-   - Everything in `src/domain/` and `src/engine/` must remain free of DOM (`document`/`window`) and UI (`preact`) dependencies so it can be tested directly and deterministically in Vitest.
+   - Everything in `src/domain/` and `src/engine/` must remain free of DOM (`document`/`window`) and UI (`preact`) dependencies so it can be tested directly and deterministically in Vitest (enforced by `tests/architecture.test.ts`).
 2. **Never Trigger 60 FPS Preact Re-Renders**:
    - `AthleteSvg.tsx` (and future `Stage3D.tsx`) mutates refs/GPU buffers directly inside `requestAnimationFrame` and pauses while `document.hidden`. Keep per-frame animation math inside `src/engine/`.
 3. **Preserve Offline-First Persistence & Backwards Compatibility**:
-   - All persistence goes through the `StorageAdapter` interface in `src/services/storage.ts`.
+   - All persistence goes through the `StorageAdapter` interface in `src/services/storage.ts` (enforced by `tests/architecture.test.ts`).
    - Any schema evolution must increment `SCHEMA_VERSION` in `src/domain/schema.ts` and preserve automatic lossless migration from all prior versions and JSON backups.
 4. **Adding a New Exercise or Animation**:
    - Animations: add the new key to `ANIMATION_IDS` in `src/domain/schema.ts` and implement its entry in `ANIMATION_REGISTRY` in `src/engine/animations.ts` (`ANIMATION_OPTIONS`, `ExerciseModal`, and `tests/animations.test.ts` update automatically).
-   - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations` (and `requiredEquipment` + `styles` once Phase 3 lands), ≥ 3 clear steps, and a concise `tip`.
+   - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations` (and `requiredEquipment` + `styles` once Phase 3 lands), ≥ 3 clear steps, and a concise `tip` (enforced by `tests/catalog.contract.test.ts`).
 5. **Respect Narrow Mobile & Foldable Ergonomics**:
-   - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow**. Always add `min-w-0` on CSS Grid/Flex children with truncating content.
-   - Modals must use `ModalDialog.tsx` (`role="dialog"`, `aria-modal`, `Escape` and backdrop dismiss).
+   - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow** (enforced by `e2e/mobile-and-flows.spec.ts`). Always add `min-w-0` on CSS Grid/Flex children with truncating content.
+   - Modals must use `ModalDialog.tsx` (`role="dialog"`, `aria-modal`, `Escape` and backdrop dismiss; enforced by `tests/architecture.test.ts`).
    - Keep transport buttons touch-friendly and keyboard shortcuts disabled while typing in form fields or when modals are open.
 
 ## 6. Verification Checklist Before Finishing Changes
 
-Run all checks (with 0 errors and 0 lint warnings) before committing or opening a PR:
+Run the unified local gate (and E2E when UI/layout/config changes) before committing or opening a PR:
 
 ```bash
-pnpm typecheck
-pnpm lint
-pnpm fmt:check
-pnpm test
-pnpm build
+pnpm check          # typecheck + lint (--deny-warnings) + fmt:check + test + build + check:budget
+pnpm test:e2e       # Playwright 360px/390px/1280px zero-overflow & flow tests (required on UI changes)
 ```

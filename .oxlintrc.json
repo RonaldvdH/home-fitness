@@ -8,5 +8,11 @@
   "rules": {
     "import/no-unassigned-import": ["warn", { "allow": ["**/*.css"] }]
   },
-  "ignorePatterns": ["dist/**", "node_modules/**", "public/**"]
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "public/**",
+    "playwright-report/**",
+    "test-results/**"
+  ]
 }

@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 
 export interface ModalDialogProps {
   open: boolean;
@@ -18,13 +18,18 @@ export function ModalDialog({
   onClose,
   children,
 }: ModalDialogProps) {
-  useEffect(() => {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Bind synchronously on commit so Escape works immediately as soon as the dialog is visible,
+  // and keep the listener stable across parent re-renders via onCloseRef.
+  useLayoutEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -32,7 +37,7 @@ export function ModalDialog({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -41,7 +46,7 @@ export function ModalDialog({
       class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
-          onClose();
+          onCloseRef.current();
         }
       }}
     >
@@ -58,7 +63,7 @@ export function ModalDialog({
           <button
             type="button"
             aria-label="Close dialog"
-            onClick={onClose}
+            onClick={() => onCloseRef.current()}
             class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
           >
             <svg

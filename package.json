@@ -9,19 +9,24 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "fmt": "oxfmt --write",
     "fmt:check": "oxfmt --check",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:budget": "node scripts/check-bundle-budget.mjs",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm lint && pnpm fmt:check && pnpm test && pnpm build && pnpm check:budget"
   },
   "dependencies": {
     "preact": "^11.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@preact/preset-vite": "^2.10.6",
     "@tailwindcss/vite": "^4.1.4",
     "@testing-library/preact": "^3.2.6",
+    "@types/node": "^26.6.11",
     "happy-dom": "^21.0.4",
     "oxfmt": "^0.80.0",
     "oxlint": "^1.95.0",
