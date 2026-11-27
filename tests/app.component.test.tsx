@@ -195,4 +195,50 @@ describe('<App /> integration flows', () => {
 
     store.destroy();
   });
+
+  it('opens unified Settings with Timer & Audio, Spaces, and Data & Backup tabs', async () => {
+    const store = createWorkoutStore({ storage: createMemoryAdapter() });
+    render(<App store={store} />);
+
+    fireEvent.click(screen.getByLabelText('Open settings'));
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeTruthy();
+    expect(screen.getByText('Circuit Intervals')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Spaces/i }));
+    expect(await screen.findByText('Home Gym')).toBeTruthy();
+    expect(screen.getByText('Travel')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /Data & Backup/i }));
+    expect(await screen.findByText('Export JSON')).toBeTruthy();
+
+    store.destroy();
+  });
+
+  it('browses all exercises, filters by equipment, live-previews, and previews on stage', async () => {
+    const store = createWorkoutStore({ storage: createMemoryAdapter() });
+    render(<App store={store} />);
+
+    fireEvent.click(screen.getByText('Browse All Exercises'));
+    expect(await screen.findByRole('dialog', {}, { timeout: 5000 })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foam Roller' }));
+    const previewTitle = screen.getByTestId('library-preview-title').textContent ?? '';
+    expect(previewTitle.length).toBeGreaterThan(0);
+
+    // Add to active routine
+    fireEvent.click(screen.getByRole('button', { name: '+ Add to Routine' }));
+    expect(store.getState().activeRoutine.exercises.some((ex) => ex.name === previewTitle)).toBe(
+      true,
+    );
+
+    // Preview on Stage closes browser and displays non-destructive preview banner
+    fireEvent.click(screen.getByRole('button', { name: 'Preview on Stage' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(screen.getByTestId('active-exercise-title').textContent).toBe(previewTitle);
+    expect(screen.getByText('Back to Workout')).toBeTruthy();
+
+    store.destroy();
+  });
 });

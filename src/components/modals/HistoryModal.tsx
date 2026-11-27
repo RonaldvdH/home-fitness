@@ -44,9 +44,9 @@ export function HistoryModal({ open, history, onClose, onLogManualSession }: His
         </div>
         <p class="text-sm font-semibold text-white mt-0.5">Saved automatically on this device</p>
         <p class="text-xs text-slate-400 mt-1 leading-relaxed">
-          Your exercises, timer settings, and workout history stay stored in browser storage and
-          work 100% offline. Use Export JSON in the routine panel to back up or transfer between
-          devices.
+          Your exercises, Workout Spaces, timer settings, and workout history stay stored in browser
+          storage and work 100% offline. Use Settings → Data & Backup to export or restore JSON
+          backups across devices.
         </p>
       </div>
 

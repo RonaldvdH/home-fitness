@@ -4,28 +4,24 @@ export interface RoutineSidebarProps {
   exercises: readonly Exercise[];
   highlightedExerciseId: string | null;
   onAddExercise: () => void;
+  onOpenLibrary: () => void;
   onPreviewExercise: (id: string) => void;
   onMoveExercise: (index: number, delta: -1 | 1) => void;
   onToggleExercise: (id: string) => void;
   onEditExercise: (exercise: Exercise) => void;
   onDeleteExercise: (id: string) => void;
-  onExportJson: () => void;
-  onImportFile: (file: File) => void;
-  onRestoreDefaults: () => void;
 }
 
 export function RoutineSidebar({
   exercises,
   highlightedExerciseId,
   onAddExercise,
+  onOpenLibrary,
   onPreviewExercise,
   onMoveExercise,
   onToggleExercise,
   onEditExercise,
   onDeleteExercise,
-  onExportJson,
-  onImportFile,
-  onRestoreDefaults,
 }: RoutineSidebarProps) {
   return (
     <aside class="lg:col-span-4 min-w-0 flex flex-col gap-4">
@@ -195,37 +191,29 @@ export function RoutineSidebar({
           })}
         </div>
 
-        {/* Backup / Restore Footer */}
-        <div class="mt-4 pt-3.5 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onExportJson}
-              class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition"
-            >
-              Export JSON
-            </button>
-            <label class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition cursor-pointer">
-              Import
-              <input
-                type="file"
-                accept=".json,application/json"
-                class="hidden"
-                onChange={(e) => {
-                  const input = e.target as HTMLInputElement;
-                  const file = input.files?.[0];
-                  if (file) onImportFile(file);
-                  input.value = '';
-                }}
-              />
-            </label>
-          </div>
+        {/* Exercise Library Browser Entry */}
+        <div class="mt-4 pt-3.5 border-t border-slate-800">
           <button
             type="button"
-            onClick={onRestoreDefaults}
-            class="px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-400 transition"
+            onClick={onOpenLibrary}
+            class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center justify-center gap-2 transition active:scale-[0.99]"
           >
-            Reset Defaults
+            <svg
+              class="w-4 h-4 text-emerald-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span>Browse All Exercises</span>
           </button>
         </div>
       </div>
