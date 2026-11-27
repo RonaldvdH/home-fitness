@@ -5,10 +5,11 @@ import {
   normalizeSettings,
   parseAppData,
   SCHEMA_VERSION,
-  type AppDataV3,
+  type AppDataV4,
   type ParseImportResult,
 } from '../domain/schema';
 
+export const V4_STORAGE_KEY = 'home_fitness_app_v4';
 export const V3_STORAGE_KEY = 'home_fitness_app_v3';
 
 export const LEGACY_V2_KEYS = {
@@ -18,8 +19,8 @@ export const LEGACY_V2_KEYS = {
 } as const;
 
 export interface StorageAdapter {
-  load: () => AppDataV3;
-  save: (data: AppDataV3) => boolean;
+  load: () => AppDataV4;
+  save: (data: AppDataV4) => boolean;
 }
 
 function safeParseJson(raw: string | null): unknown {
@@ -35,7 +36,7 @@ function safeParseJson(raw: string | null): unknown {
  * Migrate independently from legacy v2 localStorage keys so a single corrupt key
  * never discards valid custom exercises or settings.
  */
-function migrateFromLegacyV2(storage: Pick<Storage, 'getItem'>): AppDataV3 | null {
+function migrateFromLegacyV2(storage: Pick<Storage, 'getItem'>): AppDataV4 | null {
   const rawEx = safeParseJson(storage.getItem(LEGACY_V2_KEYS.EXERCISES));
   const rawSet = safeParseJson(storage.getItem(LEGACY_V2_KEYS.SETTINGS));
   const rawHist = safeParseJson(storage.getItem(LEGACY_V2_KEYS.HISTORY));
@@ -72,6 +73,8 @@ function migrateFromLegacyV2(storage: Pick<Storage, 'getItem'>): AppDataV3 | nul
         updatedAt: new Date().toISOString(),
       },
     ],
+    spaces: base.spaces,
+    activeSpaceId: base.activeSpaceId,
     history,
   };
 }
@@ -82,21 +85,30 @@ export function createLocalStorageAdapter(
     : null,
 ): StorageAdapter {
   return {
-    load(): AppDataV3 {
+    load(): AppDataV4 {
       const fallback = createDefaultAppData();
       if (!storage) return fallback;
 
       try {
-        const rawV3 = safeParseJson(storage.getItem(V3_STORAGE_KEY));
-        if (rawV3 !== null) {
-          const parsed = parseAppData(rawV3, fallback);
+        const rawV4 = safeParseJson(storage.getItem(V4_STORAGE_KEY));
+        if (rawV4 !== null) {
+          const parsed = parseAppData(rawV4, fallback);
           if (parsed.ok) return parsed.data;
         }
 
-        const migrated = migrateFromLegacyV2(storage);
-        if (migrated) {
-          this.save(migrated);
-          return migrated;
+        const rawV3 = safeParseJson(storage.getItem(V3_STORAGE_KEY));
+        if (rawV3 !== null) {
+          const parsedV3 = parseAppData(rawV3, fallback);
+          if (parsedV3.ok) {
+            this.save(parsedV3.data);
+            return parsedV3.data;
+          }
+        }
+
+        const migratedV2 = migrateFromLegacyV2(storage);
+        if (migratedV2) {
+          this.save(migratedV2);
+          return migratedV2;
         }
       } catch {
         return fallback;
@@ -105,10 +117,10 @@ export function createLocalStorageAdapter(
       return fallback;
     },
 
-    save(data: AppDataV3): boolean {
+    save(data: AppDataV4): boolean {
       if (!storage) return false;
       try {
-        storage.setItem(V3_STORAGE_KEY, JSON.stringify(data));
+        storage.setItem(V4_STORAGE_KEY, JSON.stringify(data));
         return true;
       } catch {
         return false;
@@ -117,11 +129,11 @@ export function createLocalStorageAdapter(
   };
 }
 
-export function serializeBackupJson(data: AppDataV3): string {
+export function serializeBackupJson(data: AppDataV4): string {
   return JSON.stringify(data, null, 2);
 }
 
-export function parseBackupJson(jsonText: string, fallbackData: AppDataV3): ParseImportResult {
+export function parseBackupJson(jsonText: string, fallbackData: AppDataV4): ParseImportResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonText);

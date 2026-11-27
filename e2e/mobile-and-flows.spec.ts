@@ -17,6 +17,22 @@ async function expectZeroHorizontalOverflow(page: Page, contextLabel: string): P
   ).toBeLessThanOrEqual(metrics.innerWidth);
 }
 
+async function dismissDialogWithEscape(page: Page): Promise<void> {
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  // Verify Base UI's post-mount focus trap & useDismiss effect settled (Preact flushes useEffect on rAF)
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const el = document.querySelector('[role="dialog"]');
+        return Boolean(el && document.activeElement && el.contains(document.activeElement));
+      }),
+    )
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+}
+
 for (const vp of VIEWPORTS) {
   test(`zero horizontal overflow & zero runtime errors on ${vp.name}`, async ({ page }) => {
     const errors: string[] = [];
@@ -41,22 +57,19 @@ for (const vp of VIEWPORTS) {
     await page.getByRole('button', { name: 'New Workout' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expectZeroHorizontalOverflow(page, `${vp.name} New Workout modal`);
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await dismissDialogWithEscape(page);
 
     // Check Settings modal fits cleanly
     await page.getByLabel('Open timer settings').click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expectZeroHorizontalOverflow(page, `${vp.name} Settings modal`);
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await dismissDialogWithEscape(page);
 
     // Check History modal fits cleanly
     await page.getByRole('button', { name: 'Open workout history', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expectZeroHorizontalOverflow(page, `${vp.name} History modal`);
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog')).toBeHidden();
+    await dismissDialogWithEscape(page);
 
     expect(errors).toEqual([]);
   });
@@ -121,8 +134,7 @@ test('Galaxy Z Flip core workout flow: New Workout -> Shuffle -> Start -> Pause 
   await addExBtn.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectZeroHorizontalOverflow(page, '360x800 Add Exercise modal');
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await dismissDialogWithEscape(page);
 });
 
 test('Galaxy Z Flip Flex / Floor Mode (360x780): top half display, bottom half controls, zero overflow', async ({
@@ -191,8 +203,7 @@ test('Galaxy Z Flip Flex / Floor Mode (360x780): top half display, bottom half c
   await bottomSeg.getByLabel('New Workout').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectZeroHorizontalOverflow(page, '360x780 Floor Mode New Workout modal');
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await dismissDialogWithEscape(page);
   await expect(page.getByTestId('flex-workout-view')).toBeVisible();
 
   // Exit Floor Mode cleanly restores normal view with workout step preserved
@@ -201,5 +212,64 @@ test('Galaxy Z Flip Flex / Floor Mode (360x780): top half display, bottom half c
   await expect(page.getByTestId('step-counter')).toContainText('2/');
   await expectZeroHorizontalOverflow(page, '360x780 after exiting Floor Mode');
 
+  expect(errors).toEqual([]);
+});
+
+test('Workout Spaces (360x800): switching to Travel excludes dumbbells & Manage Spaces creates custom space', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  // Open New Workout overlay and switch Space to Travel (no dumbbells)
+  await page.getByRole('button', { name: 'New Workout' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Travel', exact: true }).click();
+  await expect(page.getByTestId('active-space-equipment-summary')).toContainText('Wall');
+  await expect(page.getByTestId('active-space-equipment-summary')).not.toContainText('DB');
+
+  // Preview and load a 15 min Upper Body Travel workout -> zero Dumbbell exercises
+  await page.getByRole('button', { name: /15 min/i }).click();
+  await page.getByRole('button', { name: /Upper Body/i }).click();
+  const previewText = await page.getByTestId('new-workout-preview').textContent();
+  expect(previewText?.toLowerCase()).not.toContain('dumbbell');
+
+  await page.getByRole('button', { name: 'Load & Preview' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  const routineSidebarText = await page.locator('aside').textContent();
+  expect(routineSidebarText?.toLowerCase()).not.toContain('dumbbell');
+  await expectZeroHorizontalOverflow(page, '360x800 Travel workout loaded');
+
+  // Open New Workout -> Manage Spaces -> create a custom 7.5kg Balcony space
+  await page.getByRole('button', { name: 'New Workout' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Manage Spaces' }).click();
+  await expect(page.getByRole('heading', { name: 'Workout Spaces' })).toBeVisible();
+  await expectZeroHorizontalOverflow(page, '360x800 SpacesModal list');
+
+  await page.getByRole('button', { name: '+ Add Workout Space' }).click();
+  await page.getByLabel('Space Name *').fill('Balcony');
+  await page.getByRole('button', { name: 'Dumbbells' }).click();
+  await page.getByLabel('Dumbbell Weight (kg)').fill('7.5');
+  await page.getByRole('button', { name: 'Save Space' }).click();
+
+  const spacesDialog = page.getByRole('dialog');
+  await expect(spacesDialog.getByText('Balcony', { exact: true })).toBeVisible();
+  await expect(spacesDialog.getByText('7.5kg Dumbbells')).toBeVisible();
+  await spacesDialog.getByRole('button', { name: 'Done' }).click();
+
+  // Returns smoothly to New Workout with Balcony selected and 7.5kg DB shown
+  await expect(page.getByRole('heading', { name: 'Start a New Workout' })).toBeVisible();
+  await expect(page.getByTestId('active-space-equipment-summary')).toContainText('7.5kg DB');
+  await expectZeroHorizontalOverflow(page, '360x800 New Workout after adding Balcony');
+
+  await dismissDialogWithEscape(page);
   expect(errors).toEqual([]);
 });
