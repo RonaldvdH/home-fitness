@@ -506,3 +506,37 @@ test('Pilates & Mobility style (360x800): selecting Pilates persists across relo
 
   expect(errors).toEqual([]);
 });
+
+test('Phase 6 Progression & Polish (360x800): History consistency calendar and Soft Chimes audio theme persist', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  // Log a workout and verify History Insights + 28-day consistency heatmap update
+  await page.getByRole('button', { name: 'Open workout history', exact: true }).click();
+  await expect(page.getByTestId('history-insights')).toBeVisible();
+  await expect(page.getByTestId('consistency-heatmap').locator('[role="listitem"]')).toHaveCount(
+    28,
+  );
+  await page.getByRole('button', { name: '+ Log Completed Workout' }).click();
+  await expect(page.getByTestId('history-insights')).toContainText('1w');
+  await expectZeroHorizontalOverflow(page, '360x800 History Insights');
+  await dismissDialogWithEscape(page);
+
+  // Switch Audio Cue Theme to Soft Chimes in Settings and verify persistence across reload
+  await page.getByLabel('Open settings').click();
+  await page.getByTestId('audio-theme-chime').click();
+  await page.getByRole('button', { name: 'Save & Apply' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+
+  await page.reload();
+  await page.getByLabel('Open settings').click();
+  await expect(page.getByTestId('audio-theme-chime')).toHaveAttribute('aria-pressed', 'true');
+  await dismissDialogWithEscape(page);
+
+  expect(errors).toEqual([]);
+});

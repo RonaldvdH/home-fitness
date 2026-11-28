@@ -1,12 +1,16 @@
 /**
- * Web Audio API synthesizer for interval cues and countdown beeps.
+ * Web Audio API synthesizer for interval cues, countdown beeps, and soft Pilates/Mobility chimes.
  */
+
+import type { AudioTheme } from '../domain/schema';
 
 type AudioContextConstructor = typeof AudioContext;
 
 export interface AudioCoach {
   setEnabled: (enabled: boolean) => void;
   isEnabled: () => boolean;
+  setTheme: (theme: AudioTheme) => void;
+  getTheme: () => AudioTheme;
   unlock: () => void;
   beepCountdown: () => void;
   beepWorkStart: () => void;
@@ -15,9 +19,13 @@ export interface AudioCoach {
   dispose: () => void;
 }
 
-export function createAudioCoach(initialEnabled = true): AudioCoach {
+export function createAudioCoach(
+  initialEnabled = true,
+  initialTheme: AudioTheme = 'classic',
+): AudioCoach {
   let ctx: AudioContext | null = null;
   let enabled = initialEnabled;
+  let theme: AudioTheme = initialTheme;
 
   function ensureContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -69,21 +77,47 @@ export function createAudioCoach(initialEnabled = true): AudioCoach {
     isEnabled() {
       return enabled;
     },
+    setTheme(next: AudioTheme) {
+      theme = next;
+    },
+    getTheme() {
+      return theme;
+    },
     unlock() {
       if (enabled) ensureContext();
     },
     beepCountdown() {
+      if (theme === 'chime') {
+        playTone(432, 0.22, 'sine', 0, 0.14);
+        return;
+      }
       playTone(540, 0.11, 'triangle', 0, 0.2);
     },
     beepWorkStart() {
+      if (theme === 'chime') {
+        playTone(528, 0.42, 'sine', 0, 0.18);
+        playTone(792, 0.46, 'sine', 0.12, 0.14);
+        return;
+      }
       playTone(880, 0.24, 'sine', 0, 0.3);
       playTone(1174.66, 0.2, 'sine', 0.11, 0.24);
     },
     beepRestStart() {
+      if (theme === 'chime') {
+        playTone(396, 0.36, 'sine', 0, 0.16);
+        playTone(330, 0.44, 'sine', 0.14, 0.13);
+        return;
+      }
       playTone(440, 0.16, 'sine', 0, 0.22);
       playTone(349.23, 0.24, 'sine', 0.15, 0.22);
     },
     beepComplete() {
+      if (theme === 'chime') {
+        playTone(396, 0.34, 'sine', 0, 0.16);
+        playTone(528, 0.38, 'sine', 0.16, 0.16);
+        playTone(660, 0.52, 'sine', 0.32, 0.18);
+        return;
+      }
       playTone(523.25, 0.15, 'triangle', 0, 0.25);
       playTone(659.25, 0.15, 'triangle', 0.13, 0.25);
       playTone(783.99, 0.15, 'triangle', 0.26, 0.25);

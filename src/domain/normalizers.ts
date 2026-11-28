@@ -242,6 +242,7 @@ export function normalizeSettings(raw: unknown): WorkoutSettings {
       typeof raw.soundEnabled === 'boolean' ? raw.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
     voiceEnabled:
       typeof raw.voiceEnabled === 'boolean' ? raw.voiceEnabled : DEFAULT_SETTINGS.voiceEnabled,
+    audioTheme: raw.audioTheme === 'chime' ? 'chime' : 'classic',
     demoSpeed: clampFloat(raw.demoSpeed, 0.5, 1.5, DEFAULT_SETTINGS.demoSpeed),
   };
 }

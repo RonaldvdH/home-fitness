@@ -151,8 +151,17 @@ export function AppModals({
         <HistoryModal
           open
           history={slice.history}
+          activeSpace={slice.activeSpace}
           onClose={closeModal}
           onLogManualSession={() => store.logManualSession()}
+          onUpgradeSpaceWeight={(space, nextKg) => {
+            store.saveSpace({
+              id: space.id,
+              name: space.name,
+              availableEquipment: space.availableEquipment,
+              dumbbellWeightKg: nextKg,
+            });
+          }}
         />
       )}
     </Suspense>

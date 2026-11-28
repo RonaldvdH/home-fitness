@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { WorkoutSettings, WorkoutSpace } from '../../domain/schema';
+import type { AudioTheme, WorkoutSettings, WorkoutSpace } from '../../domain/schema';
 import type { SpaceFormInput } from '../../state/workoutStore';
 import { SpacesPanel } from '../settings/SpacesPanel';
 import { ModalDialog } from './ModalDialog';
@@ -59,6 +60,7 @@ export function SettingsModal({
   const [includeCooldown, setIncludeCooldown] = useState(settings.includeCooldown);
   const [soundEnabled, setSoundEnabled] = useState(settings.soundEnabled);
   const [voiceEnabled, setVoiceEnabled] = useState(settings.voiceEnabled);
+  const [audioTheme, setAudioTheme] = useState<AudioTheme>(settings.audioTheme ?? 'classic');
 
   const lastSyncedRef = useRef({ open, initialTab, settings });
 
@@ -77,6 +79,7 @@ export function SettingsModal({
     setIncludeCooldown(settings.includeCooldown);
     setSoundEnabled(settings.soundEnabled);
     setVoiceEnabled(settings.voiceEnabled);
+    setAudioTheme(settings.audioTheme ?? 'classic');
   }, [open, initialTab, settings]);
 
   const handleSubmit = (event: SubmitEvent): void => {
@@ -89,6 +92,7 @@ export function SettingsModal({
       includeCooldown,
       soundEnabled,
       voiceEnabled,
+      audioTheme,
     });
     onClose();
   };
@@ -272,6 +276,27 @@ export function SettingsModal({
                   checked={voiceEnabled}
                   disabled={!voiceSupported}
                   onCheckedChange={(checked) => setVoiceEnabled(checked)}
+                />
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+                <div class="min-w-0">
+                  <span class="text-xs sm:text-sm font-semibold text-slate-200 block">
+                    Audio Cue Theme
+                  </span>
+                  <span class="text-[11px] text-slate-400">
+                    Soft chimes suit Pilates &amp; Mobility flows
+                  </span>
+                </div>
+                <SegmentedControl
+                  value={audioTheme}
+                  onChange={setAudioTheme}
+                  ariaLabel="Audio cue theme"
+                  size="sm"
+                  options={[
+                    { value: 'classic', label: 'Classic Beeps', testId: 'audio-theme-classic' },
+                    { value: 'chime', label: 'Soft Chimes', testId: 'audio-theme-chime' },
+                  ]}
                 />
               </div>
             </section>
