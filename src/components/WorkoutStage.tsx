@@ -4,7 +4,7 @@ import {
   type TimelinePhase,
   type TimelineStep,
 } from '../domain/schema';
-import { AthleteSvg } from './AthleteSvg';
+import { ExerciseDemonstrator } from './ExerciseDemonstrator';
 
 export interface WorkoutStageProps {
   routineName: string;
@@ -13,6 +13,7 @@ export interface WorkoutStageProps {
   previewExercise: Exercise | null;
   isCompleted: boolean;
   demoSpeed: number;
+  stagePaused?: boolean;
   onSetDemoSpeed: (speed: number) => void;
   onClearPreview: () => void;
   onOpenNewWorkout: () => void;
@@ -32,6 +33,7 @@ export function WorkoutStage({
   previewExercise,
   isCompleted,
   demoSpeed,
+  stagePaused = false,
   onSetDemoSpeed,
   onClearPreview,
   onOpenNewWorkout,
@@ -171,15 +173,16 @@ export function WorkoutStage({
           </div>
         </div>
 
-        {/* Centerpiece Split: Left = 60fps SVG Stage | Right = Coaching Cues */}
+        {/* Centerpiece Split: Left = 60fps 3D/2D Stage | Right = Coaching Cues */}
         <div class="grid grid-cols-1 md:grid-cols-12">
           <div
-            class={`md:col-span-7 min-w-0 ${spotlightClass} relative flex flex-col items-center justify-center p-4 pt-12 sm:p-8 min-h-[260px] sm:min-h-[380px] border-b md:border-b-0 md:border-r border-slate-800/80`}
+            class={`md:col-span-7 min-w-0 ${spotlightClass} relative flex flex-col items-center justify-center p-2 sm:p-4 min-h-[270px] sm:min-h-[380px] border-b md:border-b-0 md:border-r border-slate-800/80`}
           >
-            <AthleteSvg
+            <ExerciseDemonstrator
               animationType={activeExercise.animationType}
               speedMultiplier={demoSpeed}
               weightLabel={weightLabel}
+              paused={stagePaused}
             />
           </div>
 

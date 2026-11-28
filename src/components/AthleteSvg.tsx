@@ -7,6 +7,7 @@ export interface AthleteSvgProps {
   speedMultiplier: number;
   weightLabel: string | null;
   variant?: 'default' | 'flex';
+  hideBadge?: boolean;
 }
 
 function setLineAttrs(
@@ -47,6 +48,7 @@ export function AthleteSvg({
   speedMultiplier,
   weightLabel,
   variant = 'default',
+  hideBadge = false,
 }: AthleteSvgProps) {
   const showDumbbells = weightLabel !== null;
 
@@ -273,7 +275,7 @@ export function AthleteSvg({
 
   return (
     <>
-      {!isFlex && (
+      {!isFlex && !hideBadge && (
         <div class="absolute top-3 left-3 sm:top-3.5 sm:left-4 flex items-center gap-1.5 sm:gap-2">
           <span
             class="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"

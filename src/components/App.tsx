@@ -196,6 +196,7 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
             timer={state.timer}
             previewExercise={previewExercise}
             demoSpeed={state.activeRoutine.settings.demoSpeed}
+            stagePaused={anyModalOpen}
             soundEnabled={state.activeRoutine.settings.soundEnabled}
             voiceEnabled={state.activeRoutine.settings.voiceEnabled}
             voiceSupported={state.voiceSupported}
@@ -246,6 +247,7 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
               previewExercise={previewExercise}
               isCompleted={state.timer.status === 'completed'}
               demoSpeed={state.activeRoutine.settings.demoSpeed}
+              stagePaused={anyModalOpen}
               onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
               onClearPreview={() => store.clearPreview()}
               onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
