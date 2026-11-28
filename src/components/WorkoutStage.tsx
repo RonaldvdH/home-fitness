@@ -1,10 +1,8 @@
-import {
-  formatDumbbellWeight,
-  type Exercise,
-  type TimelinePhase,
-  type TimelineStep,
-} from '../domain/schema';
+import { formatDumbbellWeight, type Exercise, type TimelineStep } from '../domain/schema';
 import { ExerciseDemonstrator } from './ExerciseDemonstrator';
+import { BoltIcon } from './icons';
+import { resolveSpotlightClass } from './phaseTheme';
+import { SegmentedControl } from './ui/segmented-control';
 
 export interface WorkoutStageProps {
   routineName: string;
@@ -18,13 +16,6 @@ export interface WorkoutStageProps {
   onClearPreview: () => void;
   onOpenNewWorkout: () => void;
 }
-
-const STAGE_SPOTLIGHT_MAP: Record<TimelinePhase, string> = {
-  'WARM-UP': 'stage-spotlight-warmup',
-  WORK: 'stage-spotlight',
-  REST: 'stage-spotlight-rest',
-  'COOL-DOWN': 'stage-spotlight',
-};
 
 export function WorkoutStage({
   routineName,
@@ -41,12 +32,7 @@ export function WorkoutStage({
   const isPreview = previewExercise !== null;
   const activeExercise = previewExercise ?? currentStep.exercise;
 
-  const spotlightClass = isPreview
-    ? 'stage-spotlight-preview'
-    : isCompleted
-      ? 'stage-spotlight'
-      : STAGE_SPOTLIGHT_MAP[currentStep.phase];
-
+  const spotlightClass = resolveSpotlightClass(currentStep.phase, isPreview, isCompleted);
   const weightLabel = formatDumbbellWeight(activeExercise.equipment);
 
   return (
@@ -65,16 +51,7 @@ export function WorkoutStage({
             onClick={onOpenNewWorkout}
             class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 font-bold text-xs flex items-center gap-1.5 shrink-0 transition active:scale-95"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              aria-hidden="true"
-            >
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
+            <BoltIcon />
             <span>New Workout</span>
           </button>
         </div>
@@ -144,32 +121,16 @@ export function WorkoutStage({
               <span class="sm:hidden">Demo Pace</span>
               <span class="hidden sm:inline">Pace:</span>
             </span>
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onSetDemoSpeed(0.65)}
-                aria-pressed={demoSpeed < 0.9}
-                class={`px-3 sm:px-2.5 py-1 rounded-lg transition ${
-                  demoSpeed < 0.9
-                    ? 'bg-slate-800 text-emerald-400 font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Slow
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetDemoSpeed(1)}
-                aria-pressed={demoSpeed >= 0.9}
-                class={`px-3 sm:px-2.5 py-1 rounded-lg transition ${
-                  demoSpeed >= 0.9
-                    ? 'bg-slate-800 text-emerald-400 font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                Normal
-              </button>
-            </div>
+            <SegmentedControl<'slow' | 'normal'>
+              value={demoSpeed < 0.9 ? 'slow' : 'normal'}
+              onChange={(next) => onSetDemoSpeed(next === 'slow' ? 0.65 : 1)}
+              ariaLabel="Demo animation pace"
+              options={[
+                { value: 'slow', label: 'Slow' },
+                { value: 'normal', label: 'Normal' },
+              ]}
+              className="border-0 bg-transparent p-0"
+            />
           </div>
         </div>
 

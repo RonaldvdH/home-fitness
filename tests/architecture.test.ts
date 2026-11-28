@@ -224,4 +224,24 @@ describe('architecture & repo-rule guardrails', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('enforces a hard 500-line ceiling per src/ file (unless explicitly exempted via EX-NNN)', () => {
+    const MAX_LINES = 500;
+    const files = collectFiles(SRC_DIR, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const rel = normalizeRelPath(file);
+      const raw = readFileSync(file, 'utf8');
+      if (/guideline-exception:\s*EX-\d{3}/.test(raw)) continue;
+      const lineCount = raw.split('\n').length;
+      if (lineCount > MAX_LINES) {
+        violations.push(
+          `${rel}: ${lineCount} lines exceeds hard ${MAX_LINES}-line ceiling (ADR-0007)`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });

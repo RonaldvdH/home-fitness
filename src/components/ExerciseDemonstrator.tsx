@@ -4,6 +4,7 @@ import type { AnimationId } from '../domain/schema';
 import { getAnimationDefinition } from '../engine/animations';
 import { AthleteSvg } from './AthleteSvg';
 import { ErrorBoundary } from './ErrorBoundary';
+import { SegmentedControl } from './ui/segmented-control';
 
 const LazyStage3D = lazy(() => import('./stage3d/Stage3D').then((m) => ({ default: m.Stage3D })));
 
@@ -158,42 +159,21 @@ export function ExerciseDemonstrator({
         }
       >
         {showModeToggle && (
-          <div
-            role="group"
-            aria-label="Demonstrator view mode"
-            class={
+          <SegmentedControl<DemonstratorMode>
+            value={effectiveMode}
+            onChange={setUserMode}
+            ariaLabel="Demonstrator view mode"
+            size="xs"
+            options={[
+              { value: '3d', label: '3D', testId: 'demonstrator-mode-3d' },
+              { value: '2d', label: '2D', testId: 'demonstrator-mode-2d' },
+            ]}
+            className={
               isFlex
-                ? 'absolute bottom-2.5 left-3 z-20 flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-950/85 border border-slate-700/80 shadow-lg text-[10px]'
-                : 'absolute top-2.5 left-3 sm:top-3.5 sm:left-4 z-20 flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-950/85 border border-slate-800 text-[10px]'
+                ? 'absolute bottom-2.5 left-3 z-20 border-slate-700/80 shadow-lg'
+                : 'absolute top-2.5 left-3 sm:top-3.5 sm:left-4 z-20'
             }
-          >
-            <button
-              type="button"
-              data-testid="demonstrator-mode-3d"
-              aria-pressed={effectiveMode === '3d'}
-              onClick={() => setUserMode('3d')}
-              class={`px-2 py-0.5 rounded-md font-bold tracking-wide transition ${
-                effectiveMode === '3d'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                  : 'text-slate-400 hover:text-white border border-transparent'
-              }`}
-            >
-              3D
-            </button>
-            <button
-              type="button"
-              data-testid="demonstrator-mode-2d"
-              aria-pressed={effectiveMode === '2d'}
-              onClick={() => setUserMode('2d')}
-              class={`px-2 py-0.5 rounded-md font-bold tracking-wide transition ${
-                effectiveMode === '2d'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                  : 'text-slate-400 hover:text-white border border-transparent'
-              }`}
-            >
-              2D
-            </button>
-          </div>
+          />
         )}
 
         {stageCanvas}

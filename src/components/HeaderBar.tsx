@@ -1,6 +1,26 @@
-import type { TimelinePhase, TimelineStep } from '../domain/schema';
+import type { TimelineStep } from '../domain/schema';
 import { formatMMSS } from '../domain/timeline';
 import type { TimerSnapshot } from '../engine/timer';
+import {
+  DumbbellBrandIcon,
+  FloorModeIcon,
+  HistoryClockIcon,
+  NextStepIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevStepIcon,
+  ResetIcon,
+  SettingsGearIcon,
+  SoundOffIcon,
+  SoundOnIcon,
+  VoiceMicIcon,
+} from './icons';
+import {
+  computeTimerProgress,
+  resolvePhaseStyle,
+  resolveStartButtonLabel,
+  RING_CIRCUMFERENCE,
+} from './phaseTheme';
 
 export interface HeaderBarProps {
   currentStep: TimelineStep;
@@ -21,32 +41,6 @@ export interface HeaderBarProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
 }
-
-const PHASE_BADGE_STYLES: Record<TimelinePhase, { badge: string; stroke: string; label: string }> =
-  {
-    'WARM-UP': {
-      badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-      stroke: '#fbbf24',
-      label: 'WARM-UP',
-    },
-    WORK: {
-      badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-      stroke: '#10b981',
-      label: 'WORK',
-    },
-    REST: {
-      badge: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-      stroke: '#38bdf8',
-      label: 'REST',
-    },
-    'COOL-DOWN': {
-      badge: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-      stroke: '#c084fc',
-      label: 'COOL-DOWN',
-    },
-  };
-
-const RING_CIRCUMFERENCE = 87.96;
 
 export function HeaderBar({
   currentStep,
@@ -71,29 +65,15 @@ export function HeaderBar({
   const isRunning = timer.status === 'running';
   const isAtLastStep = timer.currentIndex >= totalSteps - 1;
 
-  const phaseStyle = isCompleted
-    ? {
-        badge: 'bg-emerald-500 text-slate-950 border-emerald-400',
-        stroke: '#10b981',
-        label: 'DONE!',
-      }
-    : PHASE_BADGE_STYLES[currentStep.phase];
-
-  const stepDurationMs = Math.max(1, currentStep.duration * 1000);
-  const ratio = isCompleted ? 0 : Math.max(0, Math.min(1, timer.remainingMs / stepDurationMs));
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - ratio);
-
-  const overallPct = isCompleted
-    ? 100
-    : Math.round(((timer.currentIndex + (1 - ratio)) / Math.max(1, totalSteps)) * 100);
-
-  const startButtonLabel = isRunning
-    ? 'Pause'
-    : isCompleted
-      ? 'Restart'
-      : timer.status === 'idle'
-        ? 'Start'
-        : 'Resume';
+  const phaseStyle = resolvePhaseStyle(currentStep.phase, isCompleted, 'default');
+  const { strokeDashoffset, overallPct } = computeTimerProgress(
+    timer.remainingMs,
+    currentStep.duration,
+    timer.currentIndex,
+    totalSteps,
+    isCompleted,
+  );
+  const startButtonLabel = resolveStartButtonLabel(timer.status);
 
   return (
     <header class="sticky top-0 z-30 w-full bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80">
@@ -101,18 +81,7 @@ export function HeaderBar({
         {/* Left: App Brand & Local Storage Indicator */}
         <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
           <div class="w-7 h-7 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
-            <svg
-              class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M6.5 6.5h11M6.5 17.5h11M3 10v4M21 10v4M6.5 4v16M17.5 4v16" />
-            </svg>
+            <DumbbellBrandIcon class="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" />
           </div>
           <div class="leading-tight min-w-0">
             <div class="flex items-center gap-1.5 sm:gap-2">
@@ -136,7 +105,7 @@ export function HeaderBar({
           </div>
         </div>
 
-        {/* Center: Responsive Timer & Transport Pill (2-row stacked on narrow phones, 1-row on sm+) */}
+        {/* Center: Responsive Timer & Transport Pill */}
         <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 sm:py-1.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-inner order-3 lg:order-2 w-full lg:w-auto sm:justify-between lg:justify-center min-w-0">
           {/* Status + Digital Clock Row */}
           <div class="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0">
@@ -191,17 +160,7 @@ export function HeaderBar({
               title="Previous Step (Left Arrow)"
               class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-white transition active:scale-95 shrink-0"
             >
-              <svg
-                class="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                aria-hidden="true"
-              >
-                <polygon points="19 20 9 12 19 4 19 20" />
-                <line x1="5" y1="19" x2="5" y2="5" />
-              </svg>
+              <PrevStepIcon class="w-4 h-4" />
             </button>
 
             <button
@@ -211,14 +170,9 @@ export function HeaderBar({
               class="flex-1 sm:flex-none justify-center px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-500/20 transition active:scale-95"
             >
               {isRunning ? (
-                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="6" y="4" width="4" height="16" />
-                  <rect x="14" y="4" width="4" height="16" />
-                </svg>
+                <PauseIcon class="w-3.5 h-3.5 fill-current" />
               ) : (
-                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
+                <PlayIcon class="w-3.5 h-3.5 fill-current" />
               )}
               <span>{startButtonLabel}</span>
             </button>
@@ -231,17 +185,7 @@ export function HeaderBar({
               title="Next Step (Right Arrow)"
               class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-white transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none shrink-0"
             >
-              <svg
-                class="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                aria-hidden="true"
-              >
-                <polygon points="5 4 15 12 5 20 5 4" />
-                <line x1="19" y1="5" x2="19" y2="19" />
-              </svg>
+              <NextStepIcon class="w-4 h-4" />
             </button>
 
             <button
@@ -251,17 +195,7 @@ export function HeaderBar({
               title="Reset Circuit"
               class="p-2 rounded-xl bg-slate-950/60 sm:bg-transparent hover:bg-slate-800 text-slate-300 sm:text-slate-400 hover:text-rose-400 transition active:scale-95 shrink-0"
             >
-              <svg
-                class="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                aria-hidden="true"
-              >
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
+              <ResetIcon class="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -284,20 +218,7 @@ export function HeaderBar({
                 : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200'
             }`}
           >
-            <svg
-              class="w-4 h-4 text-emerald-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="6" y="3" width="12" height="8" rx="1.5" />
-              <path d="M5 13h14" />
-              <path d="M6 15h12l1.5 5.5a1 1 0 0 1-.97 1.25H5.47a1 1 0 0 1-.97-1.25L6 15z" />
-            </svg>
+            <FloorModeIcon class="w-4 h-4 text-emerald-400" />
             <span class="hidden sm:inline">Floor</span>
           </button>
 
@@ -309,32 +230,7 @@ export function HeaderBar({
             title="Toggle Interval Beeps (M)"
             class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
           >
-            {soundEnabled ? (
-              <svg
-                class="w-4 h-4 text-emerald-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </svg>
-            ) : (
-              <svg
-                class="w-4 h-4 text-rose-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </svg>
-            )}
+            {soundEnabled ? <SoundOnIcon /> : <SoundOffIcon />}
           </button>
 
           {voiceSupported && (
@@ -346,19 +242,7 @@ export function HeaderBar({
               title="Toggle Voice Announcements (V)"
               class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition"
             >
-              <svg
-                class={`w-4 h-4 ${voiceEnabled ? 'text-sky-400' : 'text-slate-500'}`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
+              <VoiceMicIcon class={`w-4 h-4 ${voiceEnabled ? 'text-sky-400' : 'text-slate-500'}`} />
             </button>
           )}
 
@@ -369,17 +253,7 @@ export function HeaderBar({
             title="Settings (Timer, Spaces & Backup)"
             class="p-1.5 sm:p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition"
           >
-            <svg
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+            <SettingsGearIcon />
           </button>
 
           <button
@@ -388,17 +262,7 @@ export function HeaderBar({
             aria-label="Open workout history"
             class="p-1.5 sm:px-3 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition"
           >
-            <svg
-              class="w-4 h-4 text-emerald-400"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
+            <HistoryClockIcon />
             <span class="hidden sm:inline">History</span>
           </button>
         </div>

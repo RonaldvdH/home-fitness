@@ -20,37 +20,20 @@ const SettingsModal = lazy(() =>
   import('./modals/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
 
+export type ActiveModal =
+  | { kind: 'none' }
+  | { kind: 'new-workout' }
+  | { kind: 'library' }
+  | { kind: 'exercise'; editing: Exercise | null }
+  | { kind: 'settings'; tab: SettingsTab; returnToNewWorkout?: boolean }
+  | { kind: 'history' };
+
 export interface AppModalsProps {
-  newWorkoutModalOpen: boolean;
-  libraryModalOpen: boolean;
-  exerciseModalOpen: boolean;
-  editingExercise: Exercise | null;
-  settingsModalOpen: boolean;
-  settingsTab: SettingsTab;
-  historyModalOpen: boolean;
-  onCloseNewWorkout: () => void;
-  onManageSpaces: () => void;
-  onCloseLibrary: () => void;
-  onCloseExercise: () => void;
-  onCloseSettings: () => void;
-  onCloseHistory: () => void;
+  modal: ActiveModal;
+  onChangeModal: (next: ActiveModal) => void;
 }
 
-export function AppModals({
-  newWorkoutModalOpen,
-  libraryModalOpen,
-  exerciseModalOpen,
-  editingExercise,
-  settingsModalOpen,
-  settingsTab,
-  historyModalOpen,
-  onCloseNewWorkout,
-  onManageSpaces,
-  onCloseLibrary,
-  onCloseExercise,
-  onCloseSettings,
-  onCloseHistory,
-}: AppModalsProps) {
+export function AppModals({ modal, onChangeModal }: AppModalsProps) {
   const store = useWorkoutStore();
   const slice = useStoreSelector(
     (s) => ({
@@ -62,6 +45,10 @@ export function AppModals({
     }),
     shallowEqual,
   );
+
+  if (modal.kind === 'none') return null;
+
+  const closeModal = (): void => onChangeModal({ kind: 'none' });
 
   const handleExportJson = (): void => {
     downloadJsonBackup(store.exportJson());
@@ -80,51 +67,59 @@ export function AppModals({
 
   return (
     <Suspense fallback={null}>
-      {newWorkoutModalOpen && (
+      {modal.kind === 'new-workout' && (
         <NewWorkoutModal
-          open={newWorkoutModalOpen}
+          open
           currentSettings={slice.activeRoutine.settings}
           userExercises={slice.activeRoutine.exercises}
           spaces={slice.spaces}
           activeSpace={slice.activeSpace}
           onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
-          onManageSpaces={onManageSpaces}
-          onClose={onCloseNewWorkout}
+          onManageSpaces={() =>
+            onChangeModal({ kind: 'settings', tab: 'spaces', returnToNewWorkout: true })
+          }
+          onClose={closeModal}
           onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
         />
       )}
 
-      {libraryModalOpen && (
+      {modal.kind === 'library' && (
         <ExerciseLibraryModal
-          open={libraryModalOpen}
+          open
           userExercises={slice.activeRoutine.exercises}
           activeRoutineExerciseIds={slice.activeRoutine.exercises.map((ex) => ex.id)}
           activeSpace={slice.activeSpace}
           demoSpeed={slice.activeRoutine.settings.demoSpeed}
-          onClose={onCloseLibrary}
+          onClose={closeModal}
           onPreviewOnStage={(exercise) => store.previewCatalogExercise(exercise)}
           onAddToRoutine={(exercise) => store.addCatalogExercise(exercise)}
         />
       )}
 
-      {exerciseModalOpen && (
+      {modal.kind === 'exercise' && (
         <ExerciseModal
-          open={exerciseModalOpen}
-          editingExercise={editingExercise}
-          onClose={onCloseExercise}
+          open
+          editingExercise={modal.editing}
+          onClose={closeModal}
           onSave={(input) => store.saveExercise(input)}
         />
       )}
 
-      {settingsModalOpen && (
+      {modal.kind === 'settings' && (
         <SettingsModal
-          open={settingsModalOpen}
-          initialTab={settingsTab}
+          open
+          initialTab={modal.tab}
           settings={slice.activeRoutine.settings}
           voiceSupported={slice.voiceSupported}
           spaces={slice.spaces}
           activeSpaceId={slice.activeSpace.id}
-          onClose={onCloseSettings}
+          onClose={() => {
+            if (modal.returnToNewWorkout) {
+              onChangeModal({ kind: 'new-workout' });
+            } else {
+              closeModal();
+            }
+          }}
           onSave={(next) => store.updateSettings(next)}
           onTestBeep={() => store.testAudioBeep()}
           onTestVoice={() => store.testVoice()}
@@ -137,11 +132,11 @@ export function AppModals({
         />
       )}
 
-      {historyModalOpen && (
+      {modal.kind === 'history' && (
         <HistoryModal
-          open={historyModalOpen}
+          open
           history={slice.history}
-          onClose={onCloseHistory}
+          onClose={closeModal}
           onLogManualSession={() => store.logManualSession()}
         />
       )}
