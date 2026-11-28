@@ -13,6 +13,7 @@ import {
   type Routine,
   type WorkoutSettings,
   type WorkoutSpace,
+  type WorkoutStyle,
 } from '../domain/schema';
 import { buildCircuitTimeline, computeTotalDuration } from '../domain/timeline';
 import {
@@ -29,6 +30,7 @@ import {
 } from '../services/storage';
 import { createWakeLockController } from '../services/wakeLock';
 import {
+  applyPresetMetadataToData,
   buildSavedExercise,
   createSessionRecord,
   didTimingSettingsChange,
@@ -42,13 +44,7 @@ import {
   type IdGenerator,
   type SpaceFormInput,
 } from './mutations';
-import {
-  createToastQueue,
-  type ToastAction,
-  type ToastItem,
-  type ToastOptions,
-  type ToastVariant,
-} from './toastQueue';
+import { createToastQueue } from './toastQueue';
 import type {
   StoreListener,
   WorkoutStore,
@@ -56,18 +52,9 @@ import type {
   WorkoutStoreState,
 } from './types';
 
-export type {
-  ExerciseFormInput,
-  IdGenerator,
-  SpaceFormInput,
-  ToastAction,
-  ToastItem,
-  ToastOptions,
-  ToastVariant,
-  WorkoutStore,
-  WorkoutStoreDependencies,
-  WorkoutStoreState,
-};
+export type { ExerciseFormInput, IdGenerator, SpaceFormInput } from './mutations';
+export type { ToastAction, ToastItem, ToastOptions, ToastVariant } from './toastQueue';
+export type { WorkoutStore, WorkoutStoreDependencies, WorkoutStoreState } from './types';
 
 export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): WorkoutStore {
   const storage = deps.storage ?? createLocalStorageAdapter();
@@ -92,15 +79,14 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
   const listeners = new Set<StoreListener>();
   let cachedState: WorkoutStoreState;
 
-  const toastQueue = createToastQueue(() => {
-    notify();
-  });
+  const toastQueue = createToastQueue(() => notify());
 
   function buildSnapshot(timerSnap: TimerSnapshot): WorkoutStoreState {
     return {
       data,
       activeRoutine,
       activeSpace,
+      preferredStyle: data.preferredStyle ?? 'strength',
       timeline,
       totalDurationSec,
       timer: timerSnap,
@@ -357,10 +343,8 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
         toastQueue.push('No exercises matched this Space and filter combination.', 'error');
         return;
       }
-      if (preset.spaceId && data.spaces.some((s) => s.id === preset.spaceId)) {
-        data = { ...data, activeSpaceId: preset.spaceId };
-        activeSpace = getActiveSpace(data);
-      }
+      data = applyPresetMetadataToData(data, preset.spaceId, preset.style);
+      activeSpace = getActiveSpace(data);
       updateActiveRoutine((routine) => ({
         ...routine,
         name: preset.routineName,
@@ -380,6 +364,13 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       if (!target || target.id === data.activeSpaceId) return;
       data = { ...data, activeSpaceId: target.id };
       activeSpace = target;
+      persistData();
+      notify();
+    },
+
+    setPreferredStyle(style: WorkoutStyle) {
+      if ((data.preferredStyle ?? 'strength') === style) return;
+      data = { ...data, preferredStyle: style };
       persistData();
       notify();
     },

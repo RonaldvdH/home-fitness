@@ -13,7 +13,10 @@ export {
 } from './generator';
 export {
   WORKOUT_DURATIONS,
+  WORKOUT_STYLE_LABELS,
+  WORKOUT_STYLES,
   type MuscleGroupTag,
   type TargetMuscleGroup,
   type WorkoutDurationMin,
+  type WorkoutStyle,
 } from './schema';

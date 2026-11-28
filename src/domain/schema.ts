@@ -36,6 +36,16 @@ export const ANIMATION_IDS = [
   'roller-thoracic',
   'roller-quad',
   'roller-glute',
+  'pilates-hundred',
+  'single-leg-stretch',
+  'swan-prep',
+  'side-leg-lift',
+  'spine-twist',
+  'clam-shell',
+  'swimming',
+  'cat-cow',
+  'worlds-greatest-stretch',
+  'childs-pose',
 ] as const;
 
 export type AnimationId = (typeof ANIMATION_IDS)[number];
@@ -70,6 +80,18 @@ export const EQUIPMENT_TAG_LABELS: Record<EquipmentTag, string> = {
 
 export const WORKOUT_STYLES = ['strength', 'pilates', 'mobility'] as const;
 export type WorkoutStyle = (typeof WORKOUT_STYLES)[number];
+
+export const WORKOUT_STYLE_LABELS: Record<WorkoutStyle, string> = {
+  strength: 'Strength',
+  pilates: 'Pilates',
+  mobility: 'Mobility',
+};
+
+const WORKOUT_STYLE_SET: ReadonlySet<string> = new Set<string>(WORKOUT_STYLES);
+
+export function isWorkoutStyle(value: unknown): value is WorkoutStyle {
+  return typeof value === 'string' && WORKOUT_STYLE_SET.has(value);
+}
 
 export type EquipmentKind = 'dumbbells' | 'bodyweight' | 'kettlebell' | 'bands' | 'foam-roller';
 
@@ -141,6 +163,7 @@ export interface AppDataV4 {
   routines: Routine[];
   spaces: WorkoutSpace[];
   activeSpaceId: string;
+  preferredStyle?: WorkoutStyle;
   history: SessionRecord[];
 }
 

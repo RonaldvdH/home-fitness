@@ -165,6 +165,16 @@ export const ANIMATION_MUSCLE_HIGHLIGHTS: Record<AnimationId, AnimationMuscleSpe
   'roller-thoracic': { primary: ['chestBack'], secondary: ['shoulders'] },
   'roller-quad': { primary: ['thighs'], secondary: ['glutes'] },
   'roller-glute': { primary: ['glutes'], secondary: ['thighs'] },
+  'pilates-hundred': { primary: ['core'], secondary: ['shoulders', 'thighs'] },
+  'single-leg-stretch': { primary: ['core'], secondary: ['thighs'] },
+  'swan-prep': { primary: ['chestBack'], secondary: ['core', 'shoulders'] },
+  'side-leg-lift': { primary: ['glutes'], secondary: ['thighs', 'core'] },
+  'spine-twist': { primary: ['core'], secondary: ['chestBack', 'shoulders'] },
+  'clam-shell': { primary: ['glutes'], secondary: ['thighs'] },
+  swimming: { primary: ['chestBack', 'glutes'], secondary: ['core', 'shoulders'] },
+  'cat-cow': { primary: ['core', 'chestBack'], secondary: ['shoulders'] },
+  'worlds-greatest-stretch': { primary: ['glutes', 'thighs'], secondary: ['chestBack', 'core'] },
+  'childs-pose': { primary: ['chestBack', 'core'], secondary: ['glutes', 'shoulders'] },
 };
 
 const KEYWORD_MATCHERS: readonly { pattern: RegExp; region: BodyRegion }[] = [

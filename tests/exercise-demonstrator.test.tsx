@@ -99,4 +99,23 @@ describe('ExerciseDemonstrator seam', () => {
     expect(thighEl?.getAttribute('data-highlight')).toBe('neutral');
     expect(screen.getByTestId('muscle-highlight-legend')).toBeTruthy();
   });
+
+  it('shows live breath cues for Pilates & Mobility animations and omits them for Strength moves', () => {
+    resetWebGLSupportCache();
+    const { rerender } = render(
+      <ExerciseDemonstrator
+        animationType="pilates-hundred"
+        speedMultiplier={0.7}
+        weightLabel={null}
+      />,
+    );
+
+    const breathCue = screen.getByTestId('live-breath-cue');
+    expect(breathCue.textContent).toContain('Inhale');
+
+    rerender(
+      <ExerciseDemonstrator animationType="bicep-curl" speedMultiplier={1} weightLabel="5kg" />,
+    );
+    expect(screen.queryByTestId('live-breath-cue')).toBeNull();
+  });
 });

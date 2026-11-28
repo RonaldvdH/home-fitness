@@ -198,6 +198,7 @@ export function createDefaultAppData(nowIso = new Date().toISOString()): AppData
     routines: [routine],
     spaces,
     activeSpaceId: DEFAULT_SPACE_ID,
+    preferredStyle: 'strength',
     history: [],
   };
 }

@@ -10,6 +10,7 @@ export type MotionGuideJoint =
   | 'leftHand'
   | 'rightHand'
   | 'midHand'
+  | 'rightKnee'
   | 'leftAnkle'
   | 'rightAnkle'
   | 'pelvis'
@@ -46,6 +47,16 @@ const MOTION_GUIDE_JOINTS: Record<AnimationId, readonly MotionGuideJoint[]> = {
   'roller-thoracic': ['head'],
   'roller-quad': ['pelvis'],
   'roller-glute': ['pelvis'],
+  'pilates-hundred': ['leftHand', 'rightHand'],
+  'single-leg-stretch': ['leftAnkle', 'rightAnkle'],
+  'swan-prep': ['chest'],
+  'side-leg-lift': ['rightAnkle'],
+  'spine-twist': ['leftHand', 'rightHand'],
+  'clam-shell': ['rightKnee'],
+  swimming: ['rightHand', 'leftAnkle'],
+  'cat-cow': ['chest'],
+  'worlds-greatest-stretch': ['rightHand'],
+  'childs-pose': ['chest'],
 };
 
 function readMotionGuidePoint(pose: RigPose3D, joint: MotionGuideJoint): Vec3 {
@@ -56,6 +67,8 @@ function readMotionGuidePoint(pose: RigPose3D, joint: MotionGuideJoint): Vec3 {
       return pose.rightArm.hand;
     case 'midHand':
       return scale3(add3(pose.leftArm.hand, pose.rightArm.hand), 0.5);
+    case 'rightKnee':
+      return pose.rightLeg.knee;
     case 'leftAnkle':
       return pose.leftLeg.ankle;
     case 'rightAnkle':

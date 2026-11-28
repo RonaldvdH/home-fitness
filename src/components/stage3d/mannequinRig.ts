@@ -28,6 +28,8 @@ import { alignSegment, toVec3, type ResourceTracker } from './stageHelpers';
 export interface MannequinVectors {
   vLHd: Vector3;
   vRHd: Vector3;
+  vLKn: Vector3;
+  vRKn: Vector3;
   vLAn: Vector3;
   vRAn: Vector3;
   vLTo: Vector3;
@@ -263,7 +265,7 @@ export function createMannequinRig(
 
   return {
     syncHighlights,
-    vectors: { vLHd, vRHd, vLAn, vRAn, vLTo, vRTo },
+    vectors: { vLHd, vRHd, vLKn, vRKn, vLAn, vRAn, vLTo, vRTo },
     applyPose(pose, highlights, progress) {
       pulseRegionEmissive(highlights, progress);
 
