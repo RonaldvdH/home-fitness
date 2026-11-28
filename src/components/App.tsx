@@ -401,7 +401,32 @@ export function App({
         </>
       )}
 
-      <AppModals modal={modal} onChangeModal={setModal} />
+      <AppModals
+        modal={modal}
+        onChangeModal={setModal}
+        updateAvailable={pwaState.updateAvailable}
+        onCheckForUpdate={() => {
+          if (pwaState.updateAvailable) {
+            void pwa.applyUpdate();
+            return;
+          }
+          void pwa.checkForUpdate().then((result) => {
+            if (result === 'update-found') {
+              store.pushToast('Update found! Tap Refresh to install.', 'success');
+            } else if (result === 'up-to-date') {
+              store.pushToast('You are already on the latest version.', 'info');
+            } else {
+              store.pushToast(
+                'Update check unavailable — use Force Reload App to refresh.',
+                'info',
+              );
+            }
+          });
+        }}
+        onForceReload={() => {
+          void pwa.forceReload();
+        }}
+      />
 
       <ConnectedToastHost />
     </WorkoutStoreProvider>

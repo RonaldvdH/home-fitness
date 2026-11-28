@@ -24,6 +24,7 @@ export const ANIMATION_IDS = [
   'plank-tap',
   'band-pull-apart',
   'band-row',
+  'band-bicep-curl',
   'band-kickback',
   'wall-sit',
   'wall-pushup',

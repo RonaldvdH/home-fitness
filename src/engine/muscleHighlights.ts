@@ -153,6 +153,7 @@ export const ANIMATION_MUSCLE_HIGHLIGHTS: Record<AnimationId, AnimationMuscleSpe
   'plank-tap': { primary: ['core'], secondary: ['shoulders', 'chestBack'] },
   'band-pull-apart': { primary: ['shoulders', 'chestBack'], secondary: ['upperArms'] },
   'band-row': { primary: ['chestBack'], secondary: ['upperArms', 'shoulders'] },
+  'band-bicep-curl': { primary: ['upperArms'], secondary: ['forearms'] },
   'band-kickback': { primary: ['glutes'], secondary: ['thighs', 'core'] },
   'wall-sit': { primary: ['thighs'], secondary: ['glutes', 'calves'] },
   'wall-pushup': { primary: ['chestBack'], secondary: ['shoulders', 'upperArms'] },

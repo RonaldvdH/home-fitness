@@ -317,6 +317,35 @@ export const CORE_BAND_ANIMATIONS: Partial<Record<AnimationId, AnimationDefiniti
     },
   },
 
+  'band-bicep-curl': {
+    id: 'band-bicep-curl',
+    label: 'Banded Bicep Curls',
+    view: 'front',
+    cues: ['Curl Against Band', 'Squeeze Biceps', '2s Slow Lower', 'Keep Tension'],
+    computePose(p) {
+      const leftElbow = { x: 134, y: 128 };
+      const rightElbow = { x: 186, y: 128 };
+      const leftHand = { x: lerp(130, 134, p), y: lerp(164, 96, p) };
+      const rightHand = { x: lerp(190, 186, p), y: lerp(164, 96, p) };
+      return {
+        ...STANDING_BASE,
+        leftArm: {
+          shoulder: { x: 140, y: 94 },
+          elbow: leftElbow,
+          hand: leftHand,
+          dumbbellAngleDeg: 0,
+        },
+        rightArm: {
+          shoulder: { x: 180, y: 94 },
+          elbow: rightElbow,
+          hand: rightHand,
+          dumbbellAngleDeg: 0,
+        },
+        motionGuidePath: `M 136 246 L ${leftHand.x.toFixed(1)} ${leftHand.y.toFixed(1)} M 184 246 L ${rightHand.x.toFixed(1)} ${rightHand.y.toFixed(1)} M 136 246 L 184 246`,
+      };
+    },
+  },
+
   'band-kickback': {
     id: 'band-kickback',
     label: 'Banded Glute Kickbacks',

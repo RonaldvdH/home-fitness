@@ -29,8 +29,9 @@ import {
   RIG_DIMENSIONS,
   type RigPose3D,
 } from '../../engine/kinematics3d';
+import { createBandRig } from './bandRig';
 import type { MannequinVectors } from './mannequinRig';
-import { alignSegment, UP_AXIS, type ResourceTracker } from './stageHelpers';
+import { UP_AXIS, type ResourceTracker } from './stageHelpers';
 
 function createWeightPlateTexture(label: string): CanvasTexture {
   const size = 128;
@@ -112,7 +113,6 @@ export interface PropsRig {
 export function createPropsRig(
   scene: Scene,
   tracker: ResourceTracker,
-  unitCylinderGeo: CylinderGeometry,
   matTrimMat: MeshStandardMaterial,
   initialWeightLabel: string | null,
   initialAnimation: AnimationId,
@@ -157,23 +157,8 @@ export function createPropsRig(
   );
   scene.add(leftDumbbell.group, rightDumbbell.group, singleDumbbell.group);
 
-  // 2. Elastic resistance band (zero-allocation reusable segment pool)
-  const bandMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x38bdf8),
-      emissive: new Color(0x0284c7),
-      emissiveIntensity: 0.35,
-      roughness: 0.45,
-      metalness: 0.05,
-    }),
-  );
-  const bandSegments: Mesh[] = [];
-  for (let i = 0; i < 12; i += 1) {
-    const seg = new Mesh(unitCylinderGeo, bandMat);
-    seg.visible = false;
-    scene.add(seg);
-    bandSegments.push(seg);
-  }
+  // 2. Elastic resistance band (flat double-strand closed loop)
+  const bandRig = createBandRig(scene, tracker);
 
   // 3. Foam roller with subtle longitudinal traction ribs
   const rollerGroup = new Group();
@@ -298,44 +283,13 @@ export function createPropsRig(
   rebuildMotionGuides(initialAnimation);
 
   // Scratch vectors (zero per-frame allocations)
-  const tmpA = new Vector3();
-  const tmpB = new Vector3();
-  const tmpC = new Vector3();
-  const tmpD = new Vector3();
   const tmpDir = new Vector3();
-  const tmpMid = new Vector3();
   const tmpQuat = new Quaternion();
   const wallBaseNormal = new Vector3(0, 0, 1);
 
-  const applyBandCurve = (
-    startIdx: number,
-    segCount: number,
-    p0: Vector3,
-    ctrl: Vector3,
-    p1: Vector3,
-  ): void => {
-    for (let i = 0; i < segCount; i += 1) {
-      const t0 = i / segCount;
-      const t1 = (i + 1) / segCount;
-      const inv0 = 1 - t0;
-      const inv1 = 1 - t1;
-
-      tmpA.set(
-        inv0 * inv0 * p0.x + 2 * inv0 * t0 * ctrl.x + t0 * t0 * p1.x,
-        inv0 * inv0 * p0.y + 2 * inv0 * t0 * ctrl.y + t0 * t0 * p1.y,
-        inv0 * inv0 * p0.z + 2 * inv0 * t0 * ctrl.z + t0 * t0 * p1.z,
-      );
-      tmpB.set(
-        inv1 * inv1 * p0.x + 2 * inv1 * t1 * ctrl.x + t1 * t1 * p1.x,
-        inv1 * inv1 * p0.y + 2 * inv1 * t1 * ctrl.y + t1 * t1 * p1.y,
-        inv1 * inv1 * p0.z + 2 * inv1 * t1 * ctrl.z + t1 * t1 * p1.z,
-      );
-      alignSegment(bandSegments[startIdx + i]!, tmpA, tmpB, 0.011, tmpDir, tmpMid, tmpQuat);
-    }
-  };
-
   return {
-    applyProps(pose, weightLabel, { vLHd, vRHd, vLAn, vRAn }) {
+    applyProps(pose, weightLabel, vectors) {
+      const { vLHd, vRHd } = vectors;
       const showDumbbells = weightLabel !== null;
       const isSingleDb = showDumbbells && pose.prop.kind === 'dumbbells' && pose.prop.count === 1;
       const isDualDb = showDumbbells && !isSingleDb;
@@ -371,32 +325,7 @@ export function createPropsRig(
         singleDumbbell.group.quaternion.setFromUnitVectors(UP_AXIS, tmpDir);
       }
 
-      for (const seg of bandSegments) {
-        seg.visible = false;
-      }
-      if (pose.prop.kind === 'band') {
-        if (pose.prop.mode === 'hands') {
-          const span = vLHd.distanceTo(vRHd);
-          const sag = Math.max(0, 0.14 - span * 0.11);
-          tmpC.addVectors(vLHd, vRHd).multiplyScalar(0.5);
-          tmpC.y -= sag;
-          applyBandCurve(0, 12, vLHd, tmpC, vRHd);
-        } else if (pose.prop.mode === 'feet-to-hands') {
-          tmpC.addVectors(vLAn, vLHd).multiplyScalar(0.5);
-          tmpC.x += 0.04;
-          applyBandCurve(0, 5, vLAn, tmpC, vLHd);
-
-          tmpD.addVectors(vRAn, vRHd).multiplyScalar(0.5);
-          tmpD.x += 0.04;
-          applyBandCurve(5, 5, vRAn, tmpD, vRHd);
-
-          alignSegment(bandSegments[10]!, vLAn, vRAn, 0.011, tmpDir, tmpMid, tmpQuat);
-        } else {
-          tmpC.addVectors(vLAn, vRAn).multiplyScalar(0.5);
-          tmpC.y += 0.04;
-          applyBandCurve(0, 10, vLAn, tmpC, vRAn);
-        }
-      }
+      bandRig.applyBand(pose.prop, vectors);
 
       if (pose.prop.kind === 'foam-roller') {
         rollerGroup.visible = true;
