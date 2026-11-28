@@ -219,6 +219,7 @@ export function FlexWorkoutView({
         <div class="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 pb-1">
           <ExerciseDemonstrator
             animationType={activeExercise.animationType}
+            muscleGroup={activeExercise.muscleGroup}
             speedMultiplier={demoSpeed}
             weightLabel={weightLabel}
             variant="flex"

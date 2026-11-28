@@ -183,6 +183,7 @@ export function ExerciseLibraryModal({
             <div class="sm:col-span-5 stage-spotlight relative h-48 sm:h-52 rounded-xl border border-slate-800/80 overflow-hidden flex items-center justify-center px-2 pt-2 pb-9">
               <ExerciseDemonstrator
                 animationType={selectedExercise.animationType}
+                muscleGroup={selectedExercise.muscleGroup}
                 speedMultiplier={demoSpeed}
                 weightLabel={formatDumbbellWeight(selectedExercise.equipment)}
                 variant="compact"
