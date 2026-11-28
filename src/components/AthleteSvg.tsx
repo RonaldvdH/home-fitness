@@ -1,12 +1,8 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { AnimationId } from '../domain/schema';
-import { computeAnimationFrame, lerp, type AthletePose } from '../engine/animations';
-import {
-  getRegionColorSpec,
-  resolveMuscleHighlights,
-  type BodyRegion,
-  type MuscleHighlightMap,
-} from '../engine/muscleHighlights';
+import { computeAnimationFrame } from '../engine/animations';
+import { resolveMuscleHighlights, type MuscleHighlightMap } from '../engine/muscleHighlights';
+import { applyHighlightsToSvg, applyPoseToSvg, type AthleteSvgRefs } from './athleteSvgDom';
 
 export interface AthleteSvgProps {
   animationType: AnimationId;
@@ -18,69 +14,51 @@ export interface AthleteSvgProps {
   onCueIndexChange?: (cueIndex: 0 | 1 | 2 | 3) => void;
 }
 
-function setLineAttrs(
-  el: SVGLineElement | null,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-): void {
-  if (!el) return;
-  el.setAttribute('x1', x1.toFixed(1));
-  el.setAttribute('y1', y1.toFixed(1));
-  el.setAttribute('x2', x2.toFixed(1));
-  el.setAttribute('y2', y2.toFixed(1));
-}
-
-function setDumbbellTransform(
-  el: SVGGElement | null,
-  x: number,
-  y: number,
-  angleDeg: number,
-  scaleX = 1,
-): void {
-  if (!el) return;
-  const scalePart = Math.abs(scaleX - 1) > 0.005 ? ` scale(${scaleX.toFixed(2)}, 1)` : '';
-  el.setAttribute(
-    'transform',
-    `translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${angleDeg.toFixed(1)})${scalePart}`,
+function SvgDumbbell({
+  groupRef,
+  testId,
+  badgeText,
+}: {
+  groupRef: AthleteSvgRefs['dumbbellLeft'];
+  testId: string;
+  badgeText: string;
+}) {
+  return (
+    <g ref={groupRef} data-testid={testId}>
+      <rect x="-18" y="-3.5" width="36" height="7" rx="2" fill="#94a3b8" />
+      <rect
+        x="-21"
+        y="-10"
+        width="7"
+        height="20"
+        rx="2"
+        fill="#f8fafc"
+        stroke="#0f172a"
+        stroke-width="1.5"
+      />
+      <rect
+        x="14"
+        y="-10"
+        width="7"
+        height="20"
+        rx="2"
+        fill="#f8fafc"
+        stroke="#0f172a"
+        stroke-width="1.5"
+      />
+      <text
+        x="0"
+        y="2.5"
+        text-anchor="middle"
+        font-size="6.5"
+        font-weight="800"
+        fill="#0f172a"
+        font-family="Inter, sans-serif"
+      >
+        {badgeText}
+      </text>
+    </g>
   );
-}
-
-function setRegionStroke(
-  el: SVGElement | null,
-  region: BodyRegion,
-  highlights: MuscleHighlightMap,
-  atPeak: boolean,
-): void {
-  if (!el) return;
-  const level = highlights[region];
-  const spec = getRegionColorSpec(region, level);
-  const color = atPeak ? spec.peakHex : spec.hex;
-  if (el.getAttribute('stroke') !== color) {
-    el.setAttribute('stroke', color);
-  }
-  if (el.getAttribute('data-highlight') !== level) {
-    el.setAttribute('data-highlight', level);
-  }
-}
-
-function setRegionFill(
-  el: SVGElement | null,
-  region: BodyRegion,
-  highlights: MuscleHighlightMap,
-  atPeak: boolean,
-): void {
-  if (!el) return;
-  const level = highlights[region];
-  const spec = getRegionColorSpec(region, level);
-  const color = atPeak ? spec.peakHex : spec.hex;
-  if (el.getAttribute('fill') !== color) {
-    el.setAttribute('fill', color);
-  }
-  if (el.getAttribute('data-highlight') !== level) {
-    el.setAttribute('data-highlight', level);
-  }
 }
 
 export function AthleteSvg({
@@ -94,30 +72,32 @@ export function AthleteSvg({
 }: AthleteSvgProps) {
   const showDumbbells = weightLabel !== null;
 
-  const floorRef = useRef<SVGLineElement>(null);
-  const motionGuideRef = useRef<SVGPathElement>(null);
-  const headRef = useRef<SVGCircleElement>(null);
-  const upperTorsoRef = useRef<SVGLineElement>(null);
-  const coreTorsoRef = useRef<SVGLineElement>(null);
-  const pelvisRef = useRef<SVGCircleElement>(null);
-  const clavicleRef = useRef<SVGLineElement>(null);
+  const refs: AthleteSvgRefs = {
+    floor: useRef<SVGLineElement>(null),
+    motionGuide: useRef<SVGPathElement>(null),
+    head: useRef<SVGCircleElement>(null),
+    upperTorso: useRef<SVGLineElement>(null),
+    coreTorso: useRef<SVGLineElement>(null),
+    pelvis: useRef<SVGCircleElement>(null),
+    clavicle: useRef<SVGLineElement>(null),
+    leftThigh: useRef<SVGLineElement>(null),
+    leftShin: useRef<SVGLineElement>(null),
+    rightThigh: useRef<SVGLineElement>(null),
+    rightShin: useRef<SVGLineElement>(null),
+    footLeft: useRef<SVGLineElement>(null),
+    footRight: useRef<SVGLineElement>(null),
+    leftUpperArm: useRef<SVGLineElement>(null),
+    leftForearm: useRef<SVGLineElement>(null),
+    leftElbow: useRef<SVGCircleElement>(null),
+    dumbbellLeft: useRef<SVGGElement>(null),
+    rightUpperArm: useRef<SVGLineElement>(null),
+    rightForearm: useRef<SVGLineElement>(null),
+    rightElbow: useRef<SVGCircleElement>(null),
+    dumbbellRight: useRef<SVGGElement>(null),
+  };
 
-  const leftThighRef = useRef<SVGLineElement>(null);
-  const leftShinRef = useRef<SVGLineElement>(null);
-  const rightThighRef = useRef<SVGLineElement>(null);
-  const rightShinRef = useRef<SVGLineElement>(null);
-  const footLeftRef = useRef<SVGLineElement>(null);
-  const footRightRef = useRef<SVGLineElement>(null);
-
-  const leftUpperArmRef = useRef<SVGLineElement>(null);
-  const leftForearmRef = useRef<SVGLineElement>(null);
-  const leftElbowRef = useRef<SVGCircleElement>(null);
-  const dumbbellLeftRef = useRef<SVGGElement>(null);
-
-  const rightUpperArmRef = useRef<SVGLineElement>(null);
-  const rightForearmRef = useRef<SVGLineElement>(null);
-  const rightElbowRef = useRef<SVGCircleElement>(null);
-  const dumbbellRightRef = useRef<SVGGElement>(null);
+  const refsRef = useRef(refs);
+  refsRef.current = refs;
 
   const animTypeRef = useRef<AnimationId>(animationType);
   const highlightsRef = useRef<MuscleHighlightMap>(
@@ -136,200 +116,23 @@ export function AthleteSvg({
   onCueIndexChangeRef.current = onCueIndexChange;
 
   useEffect(() => {
-    const applyHighlights = (highlights: MuscleHighlightMap, atPeak: boolean): void => {
-      setRegionStroke(clavicleRef.current, 'shoulders', highlights, atPeak);
-      setRegionStroke(upperTorsoRef.current, 'chestBack', highlights, atPeak);
-      setRegionStroke(coreTorsoRef.current, 'core', highlights, atPeak);
-      setRegionFill(pelvisRef.current, 'glutes', highlights, atPeak);
-
-      setRegionStroke(leftThighRef.current, 'thighs', highlights, atPeak);
-      setRegionStroke(rightThighRef.current, 'thighs', highlights, atPeak);
-      setRegionStroke(leftShinRef.current, 'calves', highlights, atPeak);
-      setRegionStroke(rightShinRef.current, 'calves', highlights, atPeak);
-
-      setRegionStroke(leftUpperArmRef.current, 'upperArms', highlights, atPeak);
-      setRegionStroke(rightUpperArmRef.current, 'upperArms', highlights, atPeak);
-      setRegionFill(leftElbowRef.current, 'upperArms', highlights, atPeak);
-      setRegionFill(rightElbowRef.current, 'upperArms', highlights, atPeak);
-      setRegionStroke(leftForearmRef.current, 'forearms', highlights, atPeak);
-      setRegionStroke(rightForearmRef.current, 'forearms', highlights, atPeak);
-    };
-
-    const applyPose = (
-      pose: AthletePose,
-      cueIndex: 0 | 1 | 2 | 3,
-      includeDumbbells: boolean,
-      progress: number,
-    ): void => {
-      applyHighlights(highlightsRef.current, progress > 0.45);
-
-      if (cueIndex !== lastCueIndexRef.current) {
-        lastCueIndexRef.current = cueIndex;
-        onCueIndexChangeRef.current?.(cueIndex);
+    const paintFrame = (rawT: number): void => {
+      const frame = computeAnimationFrame(animTypeRef.current, rawT);
+      if (frame.cueIndex !== lastCueIndexRef.current) {
+        lastCueIndexRef.current = frame.cueIndex;
+        onCueIndexChangeRef.current?.(frame.cueIndex);
       }
-
-      if (floorRef.current) {
-        const floorStr = pose.floorY.toFixed(1);
-        floorRef.current.setAttribute('y1', floorStr);
-        floorRef.current.setAttribute('y2', floorStr);
-      }
-
-      if (motionGuideRef.current) {
-        motionGuideRef.current.setAttribute('d', pose.motionGuidePath);
-      }
-
-      if (headRef.current) {
-        headRef.current.setAttribute('cx', pose.head.x.toFixed(1));
-        headRef.current.setAttribute('cy', pose.head.y.toFixed(1));
-      }
-
-      const midX = lerp(pose.torsoHip.x, pose.torsoShoulder.x, 0.48);
-      const midY = lerp(pose.torsoHip.y, pose.torsoShoulder.y, 0.48);
-
-      setLineAttrs(coreTorsoRef.current, pose.torsoHip.x, pose.torsoHip.y, midX, midY);
-      setLineAttrs(upperTorsoRef.current, midX, midY, pose.torsoShoulder.x, pose.torsoShoulder.y);
-      if (pelvisRef.current) {
-        pelvisRef.current.setAttribute('cx', pose.torsoHip.x.toFixed(1));
-        pelvisRef.current.setAttribute('cy', pose.torsoHip.y.toFixed(1));
-      }
-
-      setLineAttrs(
-        clavicleRef.current,
-        pose.clavicleStart.x,
-        pose.clavicleStart.y,
-        pose.clavicleEnd.x,
-        pose.clavicleEnd.y,
+      applyPoseToSvg(
+        refsRef.current,
+        frame.pose,
+        highlightsRef.current,
+        showDumbbellsRef.current,
+        frame.progress,
       );
-
-      setLineAttrs(
-        leftThighRef.current,
-        pose.legLeft[0].x,
-        pose.legLeft[0].y,
-        pose.legLeft[1].x,
-        pose.legLeft[1].y,
-      );
-      setLineAttrs(
-        leftShinRef.current,
-        pose.legLeft[1].x,
-        pose.legLeft[1].y,
-        pose.legLeft[2].x,
-        pose.legLeft[2].y,
-      );
-      setLineAttrs(
-        rightThighRef.current,
-        pose.legRight[0].x,
-        pose.legRight[0].y,
-        pose.legRight[1].x,
-        pose.legRight[1].y,
-      );
-      setLineAttrs(
-        rightShinRef.current,
-        pose.legRight[1].x,
-        pose.legRight[1].y,
-        pose.legRight[2].x,
-        pose.legRight[2].y,
-      );
-
-      if (footLeftRef.current) {
-        if (pose.footLeft) {
-          footLeftRef.current.style.display = 'inline';
-          setLineAttrs(
-            footLeftRef.current,
-            pose.footLeft[0].x,
-            pose.footLeft[0].y,
-            pose.footLeft[1].x,
-            pose.footLeft[1].y,
-          );
-        } else {
-          footLeftRef.current.style.display = 'none';
-        }
-      }
-
-      setLineAttrs(
-        footRightRef.current,
-        pose.footRight[0].x,
-        pose.footRight[0].y,
-        pose.footRight[1].x,
-        pose.footRight[1].y,
-      );
-
-      if (pose.leftArm) {
-        if (leftUpperArmRef.current) leftUpperArmRef.current.style.display = 'inline';
-        if (leftForearmRef.current) leftForearmRef.current.style.display = 'inline';
-        if (leftElbowRef.current) leftElbowRef.current.style.display = 'inline';
-        setLineAttrs(
-          leftUpperArmRef.current,
-          pose.leftArm.shoulder.x,
-          pose.leftArm.shoulder.y,
-          pose.leftArm.elbow.x,
-          pose.leftArm.elbow.y,
-        );
-        setLineAttrs(
-          leftForearmRef.current,
-          pose.leftArm.elbow.x,
-          pose.leftArm.elbow.y,
-          pose.leftArm.hand.x,
-          pose.leftArm.hand.y,
-        );
-        if (leftElbowRef.current) {
-          leftElbowRef.current.setAttribute('cx', pose.leftArm.elbow.x.toFixed(1));
-          leftElbowRef.current.setAttribute('cy', pose.leftArm.elbow.y.toFixed(1));
-        }
-        if (dumbbellLeftRef.current) {
-          const showLeftDb = includeDumbbells && !pose.hideLeftDumbbell;
-          dumbbellLeftRef.current.style.display = showLeftDb ? 'inline' : 'none';
-          if (showLeftDb) {
-            setDumbbellTransform(
-              dumbbellLeftRef.current,
-              pose.leftArm.hand.x,
-              pose.leftArm.hand.y,
-              pose.leftArm.dumbbellAngleDeg,
-              pose.leftArm.dumbbellScaleX,
-            );
-          }
-        }
-      } else {
-        if (leftUpperArmRef.current) leftUpperArmRef.current.style.display = 'none';
-        if (leftForearmRef.current) leftForearmRef.current.style.display = 'none';
-        if (leftElbowRef.current) leftElbowRef.current.style.display = 'none';
-        if (dumbbellLeftRef.current) dumbbellLeftRef.current.style.display = 'none';
-      }
-
-      setLineAttrs(
-        rightUpperArmRef.current,
-        pose.rightArm.shoulder.x,
-        pose.rightArm.shoulder.y,
-        pose.rightArm.elbow.x,
-        pose.rightArm.elbow.y,
-      );
-      setLineAttrs(
-        rightForearmRef.current,
-        pose.rightArm.elbow.x,
-        pose.rightArm.elbow.y,
-        pose.rightArm.hand.x,
-        pose.rightArm.hand.y,
-      );
-      if (rightElbowRef.current) {
-        rightElbowRef.current.setAttribute('cx', pose.rightArm.elbow.x.toFixed(1));
-        rightElbowRef.current.setAttribute('cy', pose.rightArm.elbow.y.toFixed(1));
-      }
-      if (dumbbellRightRef.current) {
-        dumbbellRightRef.current.style.display = includeDumbbells ? 'inline' : 'none';
-        if (includeDumbbells) {
-          setDumbbellTransform(
-            dumbbellRightRef.current,
-            pose.rightArm.hand.x,
-            pose.rightArm.hand.y,
-            pose.rightArm.dumbbellAngleDeg,
-            pose.rightArm.dumbbellScaleX,
-          );
-        }
-      }
     };
 
     // Paint initial frame immediately so first paint and unit tests are accurate.
-    const initial = computeAnimationFrame(animTypeRef.current, 0);
-    applyPose(initial.pose, initial.cueIndex, showDumbbellsRef.current, initial.progress);
+    paintFrame(0);
 
     let rafId: number | null = null;
     let lastTimestamp = 0;
@@ -349,10 +152,7 @@ export function AthleteSvg({
 
       const cycleDuration = 3.2 / Math.max(0.5, speedRef.current);
       phaseTimeRef.current = (phaseTimeRef.current + dt) % cycleDuration;
-      const rawT = phaseTimeRef.current / cycleDuration;
-
-      const frame = computeAnimationFrame(animTypeRef.current, rawT);
-      applyPose(frame.pose, frame.cueIndex, showDumbbellsRef.current, frame.progress);
+      paintFrame(phaseTimeRef.current / cycleDuration);
 
       rafId = requestAnimationFrame(tick);
     };
@@ -372,28 +172,14 @@ export function AthleteSvg({
     const highlights = resolveMuscleHighlights(animationType, muscleGroup);
     highlightsRef.current = highlights;
 
-    setRegionStroke(clavicleRef.current, 'shoulders', highlights, false);
-    setRegionStroke(upperTorsoRef.current, 'chestBack', highlights, false);
-    setRegionStroke(coreTorsoRef.current, 'core', highlights, false);
-    setRegionFill(pelvisRef.current, 'glutes', highlights, false);
-    setRegionStroke(leftThighRef.current, 'thighs', highlights, false);
-    setRegionStroke(rightThighRef.current, 'thighs', highlights, false);
-    setRegionStroke(leftShinRef.current, 'calves', highlights, false);
-    setRegionStroke(rightShinRef.current, 'calves', highlights, false);
-    setRegionStroke(leftUpperArmRef.current, 'upperArms', highlights, false);
-    setRegionStroke(rightUpperArmRef.current, 'upperArms', highlights, false);
-    setRegionFill(leftElbowRef.current, 'upperArms', highlights, false);
-    setRegionFill(rightElbowRef.current, 'upperArms', highlights, false);
-    setRegionStroke(leftForearmRef.current, 'forearms', highlights, false);
-    setRegionStroke(rightForearmRef.current, 'forearms', highlights, false);
-
+    applyHighlightsToSvg(refsRef.current, highlights, false);
     onCueIndexChangeRef.current?.(frame.cueIndex);
-    if (dumbbellLeftRef.current) {
-      dumbbellLeftRef.current.style.display =
+    if (refsRef.current.dumbbellLeft.current) {
+      refsRef.current.dumbbellLeft.current.style.display =
         showDumbbells && frame.pose.leftArm && !frame.pose.hideLeftDumbbell ? 'inline' : 'none';
     }
-    if (dumbbellRightRef.current) {
-      dumbbellRightRef.current.style.display = showDumbbells ? 'inline' : 'none';
+    if (refsRef.current.dumbbellRight.current) {
+      refsRef.current.dumbbellRight.current.style.display = showDumbbells ? 'inline' : 'none';
     }
   }, [animationType, muscleGroup, showDumbbells]);
 
@@ -441,7 +227,7 @@ export function AthleteSvg({
         }
       >
         <line
-          ref={floorRef}
+          ref={refs.floor}
           x1="45"
           y1="248"
           x2="275"
@@ -461,7 +247,7 @@ export function AthleteSvg({
         />
 
         <path
-          ref={motionGuideRef}
+          ref={refs.motionGuide}
           d=""
           fill="none"
           stroke="#10b981"
@@ -472,7 +258,7 @@ export function AthleteSvg({
 
         <g>
           <line
-            ref={leftThighRef}
+            ref={refs.leftThigh}
             data-muscle-region="thighs"
             x1="160"
             y1="158"
@@ -483,7 +269,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={leftShinRef}
+            ref={refs.leftShin}
             data-muscle-region="calves"
             x1="144"
             y1="202"
@@ -494,7 +280,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={rightThighRef}
+            ref={refs.rightThigh}
             data-muscle-region="thighs"
             x1="160"
             y1="158"
@@ -505,7 +291,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={rightShinRef}
+            ref={refs.rightShin}
             data-muscle-region="calves"
             x1="176"
             y1="202"
@@ -516,7 +302,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={footLeftRef}
+            ref={refs.footLeft}
             x1="128"
             y1="246"
             x2="142"
@@ -526,7 +312,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={footRightRef}
+            ref={refs.footRight}
             x1="178"
             y1="246"
             x2="192"
@@ -536,7 +322,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={coreTorsoRef}
+            ref={refs.coreTorso}
             data-muscle-region="core"
             x1="160"
             y1="158"
@@ -547,7 +333,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={upperTorsoRef}
+            ref={refs.upperTorso}
             data-muscle-region="chestBack"
             x1="160"
             y1="126"
@@ -558,7 +344,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <circle
-            ref={pelvisRef}
+            ref={refs.pelvis}
             data-muscle-region="glutes"
             cx="160"
             cy="158"
@@ -566,7 +352,7 @@ export function AthleteSvg({
             fill="#475569"
           />
           <line
-            ref={clavicleRef}
+            ref={refs.clavicle}
             data-muscle-region="shoulders"
             x1="140"
             y1="94"
@@ -577,7 +363,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <circle
-            ref={headRef}
+            ref={refs.head}
             cx="160"
             cy="62"
             r="16"
@@ -589,7 +375,7 @@ export function AthleteSvg({
 
         <g>
           <line
-            ref={leftUpperArmRef}
+            ref={refs.leftUpperArm}
             data-muscle-region="upperArms"
             x1="140"
             y1="94"
@@ -600,7 +386,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={leftForearmRef}
+            ref={refs.leftForearm}
             data-muscle-region="forearms"
             x1="116"
             y1="116"
@@ -610,10 +396,10 @@ export function AthleteSvg({
             stroke-width="8"
             stroke-linecap="round"
           />
-          <circle ref={leftElbowRef} cx="116" cy="116" r="4" fill="#94a3b8" />
+          <circle ref={refs.leftElbow} cx="116" cy="116" r="4" fill="#94a3b8" />
 
           <line
-            ref={rightUpperArmRef}
+            ref={refs.rightUpperArm}
             data-muscle-region="upperArms"
             x1="180"
             y1="94"
@@ -624,7 +410,7 @@ export function AthleteSvg({
             stroke-linecap="round"
           />
           <line
-            ref={rightForearmRef}
+            ref={refs.rightForearm}
             data-muscle-region="forearms"
             x1="204"
             y1="116"
@@ -634,77 +420,14 @@ export function AthleteSvg({
             stroke-width="8"
             stroke-linecap="round"
           />
-          <circle ref={rightElbowRef} cx="204" cy="116" r="4" fill="#94a3b8" />
+          <circle ref={refs.rightElbow} cx="204" cy="116" r="4" fill="#94a3b8" />
 
-          <g ref={dumbbellLeftRef} data-testid="dumbbell-left">
-            <rect x="-18" y="-3.5" width="36" height="7" rx="2" fill="#94a3b8" />
-            <rect
-              x="-21"
-              y="-10"
-              width="7"
-              height="20"
-              rx="2"
-              fill="#f8fafc"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <rect
-              x="14"
-              y="-10"
-              width="7"
-              height="20"
-              rx="2"
-              fill="#f8fafc"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <text
-              x="0"
-              y="2.5"
-              text-anchor="middle"
-              font-size="6.5"
-              font-weight="800"
-              fill="#0f172a"
-              font-family="Inter, sans-serif"
-            >
-              {badgeText}
-            </text>
-          </g>
-
-          <g ref={dumbbellRightRef} data-testid="dumbbell-right">
-            <rect x="-18" y="-3.5" width="36" height="7" rx="2" fill="#94a3b8" />
-            <rect
-              x="-21"
-              y="-10"
-              width="7"
-              height="20"
-              rx="2"
-              fill="#f8fafc"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <rect
-              x="14"
-              y="-10"
-              width="7"
-              height="20"
-              rx="2"
-              fill="#f8fafc"
-              stroke="#0f172a"
-              stroke-width="1.5"
-            />
-            <text
-              x="0"
-              y="2.5"
-              text-anchor="middle"
-              font-size="6.5"
-              font-weight="800"
-              fill="#0f172a"
-              font-family="Inter, sans-serif"
-            >
-              {badgeText}
-            </text>
-          </g>
+          <SvgDumbbell groupRef={refs.dumbbellLeft} testId="dumbbell-left" badgeText={badgeText} />
+          <SvgDumbbell
+            groupRef={refs.dumbbellRight}
+            testId="dumbbell-right"
+            badgeText={badgeText}
+          />
         </g>
       </svg>
     </>

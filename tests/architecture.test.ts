@@ -194,4 +194,34 @@ describe('architecture & repo-rule guardrails', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('forbids static imports of src/components/stage3d/ outside ExerciseDemonstrator.tsx so Three.js stays lazy-loaded', () => {
+    const files = collectFiles(SRC_DIR, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const rel = normalizeRelPath(file);
+      if (rel.startsWith('src/components/stage3d/')) continue;
+      const code = stripComments(readFileSync(file, 'utf8'));
+
+      for (const spec of extractImports(code)) {
+        if (/(?:^|\/)stage3d(?:\/|$)/.test(spec)) {
+          violations.push(
+            `${rel}: static import "${spec}" pulls Three.js into the eager bundle; use dynamic import() in ExerciseDemonstrator.tsx`,
+          );
+        }
+      }
+
+      if (
+        rel !== 'src/components/ExerciseDemonstrator.tsx' &&
+        /import\s*\([^)]*stage3d/.test(code)
+      ) {
+        violations.push(
+          `${rel}: only ExerciseDemonstrator.tsx may dynamically import src/components/stage3d/`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });
