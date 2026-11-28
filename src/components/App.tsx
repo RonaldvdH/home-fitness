@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Exercise } from '../domain/schema';
-import { downloadJsonBackup, readBackupFile } from '../services/backup';
 import {
   createFoldableController,
   type FloorModeSnapshot,
@@ -13,10 +12,17 @@ import {
   type PwaUpdateSnapshot,
 } from '../services/pwa';
 import {
+  shallowEqual,
+  useStoreSelector,
+  useWorkoutStore,
+  WorkoutStoreProvider,
+} from '../state/storeContext';
+import {
   createWorkoutStore,
   type WorkoutStore,
   type WorkoutStoreState,
 } from '../state/workoutStore';
+import { AppModals } from './AppModals';
 import { HeaderBar } from './HeaderBar';
 import type { SettingsTab } from './modals/SettingsModal';
 import { RoutineSidebar } from './RoutineSidebar';
@@ -25,21 +31,6 @@ import { WorkoutStage } from './WorkoutStage';
 
 const FlexWorkoutView = lazy(() =>
   import('./FlexWorkoutView').then((m) => ({ default: m.FlexWorkoutView })),
-);
-const ExerciseLibraryModal = lazy(() =>
-  import('./modals/ExerciseLibraryModal').then((m) => ({ default: m.ExerciseLibraryModal })),
-);
-const ExerciseModal = lazy(() =>
-  import('./modals/ExerciseModal').then((m) => ({ default: m.ExerciseModal })),
-);
-const HistoryModal = lazy(() =>
-  import('./modals/HistoryModal').then((m) => ({ default: m.HistoryModal })),
-);
-const NewWorkoutModal = lazy(() =>
-  import('./modals/NewWorkoutModal').then((m) => ({ default: m.NewWorkoutModal })),
-);
-const SettingsModal = lazy(() =>
-  import('./modals/SettingsModal').then((m) => ({ default: m.SettingsModal })),
 );
 
 export interface AppProps {
@@ -54,14 +45,240 @@ function isEditableElement(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
 }
 
+function selectPreviewExercise(state: WorkoutStoreState): Exercise | null {
+  return (
+    state.previewExerciseItem ??
+    (state.previewExerciseId
+      ? (state.activeRoutine.exercises.find((ex) => ex.id === state.previewExerciseId) ?? null)
+      : null)
+  );
+}
+
+function PwaUpdateBridge({
+  pwa,
+  pwaState,
+}: {
+  pwa: PwaUpdateController;
+  pwaState: PwaUpdateSnapshot;
+}) {
+  const store = useWorkoutStore();
+  const isRunning = useStoreSelector((s) => s.timer.status === 'running');
+  const updateToastIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const canPrompt = pwaState.updateAvailable && !isRunning;
+    if (canPrompt && updateToastIdRef.current === null) {
+      updateToastIdRef.current = store.pushToast('Update available', 'info', {
+        persistent: true,
+        action: {
+          label: 'Refresh',
+          onClick: () => {
+            void pwa.applyUpdate();
+          },
+        },
+      });
+    } else if (!pwaState.updateAvailable && updateToastIdRef.current !== null) {
+      store.dismissToast(updateToastIdRef.current);
+      updateToastIdRef.current = null;
+    }
+  }, [pwaState.updateAvailable, isRunning, store, pwa]);
+
+  return null;
+}
+
+function ConnectedHeaderBar({
+  floorModeActive,
+  onToggleFloorMode,
+  onOpenSettings,
+  onOpenHistory,
+}: {
+  floorModeActive: boolean;
+  onToggleFloorMode: () => void;
+  onOpenSettings: () => void;
+  onOpenHistory: () => void;
+}) {
+  const store = useWorkoutStore();
+  const slice = useStoreSelector(
+    (s) => ({
+      currentStep: s.timeline[s.timer.currentIndex] ?? s.timeline[0]!,
+      totalSteps: s.timeline.length,
+      totalDurationSec: s.totalDurationSec,
+      timer: s.timer,
+      soundEnabled: s.activeRoutine.settings.soundEnabled,
+      voiceEnabled: s.activeRoutine.settings.voiceEnabled,
+      voiceSupported: s.voiceSupported,
+    }),
+    shallowEqual,
+  );
+
+  return (
+    <HeaderBar
+      currentStep={slice.currentStep}
+      totalSteps={slice.totalSteps}
+      totalDurationSec={slice.totalDurationSec}
+      timer={slice.timer}
+      soundEnabled={slice.soundEnabled}
+      voiceEnabled={slice.voiceEnabled}
+      voiceSupported={slice.voiceSupported}
+      floorModeActive={floorModeActive}
+      onToggleStartPause={() => store.toggleStartPause()}
+      onPrev={() => store.stepBackward()}
+      onNext={() => store.stepForward()}
+      onReset={() => store.reset()}
+      onToggleSound={() => store.toggleSound()}
+      onToggleVoice={() => store.toggleVoice()}
+      onToggleFloorMode={onToggleFloorMode}
+      onOpenSettings={onOpenSettings}
+      onOpenHistory={onOpenHistory}
+    />
+  );
+}
+
+function ConnectedWorkoutStage({
+  stagePaused,
+  onOpenNewWorkout,
+}: {
+  stagePaused: boolean;
+  onOpenNewWorkout: () => void;
+}) {
+  const store = useWorkoutStore();
+  const slice = useStoreSelector(
+    (s) => ({
+      routineName: s.activeRoutine.name,
+      currentStep: s.timeline[s.timer.currentIndex] ?? s.timeline[0]!,
+      nextStep: s.timeline[s.timer.currentIndex + 1] ?? null,
+      previewExercise: selectPreviewExercise(s),
+      isCompleted: s.timer.status === 'completed',
+      demoSpeed: s.activeRoutine.settings.demoSpeed,
+    }),
+    shallowEqual,
+  );
+
+  return (
+    <WorkoutStage
+      routineName={slice.routineName}
+      currentStep={slice.currentStep}
+      nextStep={slice.nextStep}
+      previewExercise={slice.previewExercise}
+      isCompleted={slice.isCompleted}
+      demoSpeed={slice.demoSpeed}
+      stagePaused={stagePaused}
+      onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
+      onClearPreview={() => store.clearPreview()}
+      onOpenNewWorkout={onOpenNewWorkout}
+    />
+  );
+}
+
+function ConnectedRoutineSidebar({
+  onAddExercise,
+  onOpenLibrary,
+  onEditExercise,
+}: {
+  onAddExercise: () => void;
+  onOpenLibrary: () => void;
+  onEditExercise: (exercise: Exercise) => void;
+}) {
+  const store = useWorkoutStore();
+  const slice = useStoreSelector((s) => {
+    const currentStep = s.timeline[s.timer.currentIndex] ?? s.timeline[0]!;
+    const preview = selectPreviewExercise(s);
+    const highlightedExerciseId = preview
+      ? preview.id
+      : currentStep.phase === 'WORK'
+        ? currentStep.exercise.id
+        : null;
+    return {
+      exercises: s.activeRoutine.exercises,
+      highlightedExerciseId,
+    };
+  }, shallowEqual);
+
+  return (
+    <RoutineSidebar
+      exercises={slice.exercises}
+      highlightedExerciseId={slice.highlightedExerciseId}
+      onAddExercise={onAddExercise}
+      onOpenLibrary={onOpenLibrary}
+      onPreviewExercise={(id) => store.previewExercise(id)}
+      onMoveExercise={(index, delta) => store.moveExercise(index, delta)}
+      onToggleExercise={(id) => store.toggleExerciseActive(id)}
+      onEditExercise={onEditExercise}
+      onDeleteExercise={(id) => store.deleteExercise(id)}
+    />
+  );
+}
+
+function ConnectedFlexView({
+  floorMode,
+  stagePaused,
+  onOpenNewWorkout,
+  onExitFloorMode,
+}: {
+  floorMode: FloorModeSnapshot;
+  stagePaused: boolean;
+  onOpenNewWorkout: () => void;
+  onExitFloorMode: () => void;
+}) {
+  const store = useWorkoutStore();
+  const slice = useStoreSelector(
+    (s) => ({
+      routineName: s.activeRoutine.name,
+      currentStep: s.timeline[s.timer.currentIndex] ?? s.timeline[0]!,
+      nextStep: s.timeline[s.timer.currentIndex + 1] ?? null,
+      totalSteps: s.timeline.length,
+      timer: s.timer,
+      previewExercise: selectPreviewExercise(s),
+      demoSpeed: s.activeRoutine.settings.demoSpeed,
+      soundEnabled: s.activeRoutine.settings.soundEnabled,
+      voiceEnabled: s.activeRoutine.settings.voiceEnabled,
+      voiceSupported: s.voiceSupported,
+    }),
+    shallowEqual,
+  );
+
+  return (
+    <Suspense fallback={null}>
+      <FlexWorkoutView
+        routineName={slice.routineName}
+        currentStep={slice.currentStep}
+        nextStep={slice.nextStep}
+        totalSteps={slice.totalSteps}
+        timer={slice.timer}
+        previewExercise={slice.previewExercise}
+        demoSpeed={slice.demoSpeed}
+        stagePaused={stagePaused}
+        soundEnabled={slice.soundEnabled}
+        voiceEnabled={slice.voiceEnabled}
+        voiceSupported={slice.voiceSupported}
+        activation={floorMode.activation}
+        onToggleStartPause={() => store.toggleStartPause()}
+        onPrev={() => store.stepBackward()}
+        onNext={() => store.stepForward()}
+        onReset={() => store.reset()}
+        onToggleSound={() => store.toggleSound()}
+        onToggleVoice={() => store.toggleVoice()}
+        onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
+        onClearPreview={() => store.clearPreview()}
+        onOpenNewWorkout={onOpenNewWorkout}
+        onExitFloorMode={onExitFloorMode}
+      />
+    </Suspense>
+  );
+}
+
+function ConnectedToastHost() {
+  const store = useWorkoutStore();
+  const toasts = useStoreSelector((s) => s.toasts);
+  return <ToastHost toasts={toasts} onDismiss={(id) => store.dismissToast(id)} />;
+}
+
 export function App({
   store: externalStore,
   foldable: externalFoldable,
   pwa: externalPwa,
 }: AppProps) {
   const store = useMemo(() => externalStore ?? createWorkoutStore(), [externalStore]);
-  const [state, setState] = useState<WorkoutStoreState>(() => store.getState());
-
   const foldable = useMemo(
     () => externalFoldable ?? createFoldableController(),
     [externalFoldable],
@@ -70,7 +287,6 @@ export function App({
 
   const pwa = useMemo(() => externalPwa ?? createPwaUpdateController(), [externalPwa]);
   const [pwaState, setPwaState] = useState<PwaUpdateSnapshot>(() => pwa.getSnapshot());
-  const updateToastIdRef = useRef<number | null>(null);
 
   const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
@@ -89,12 +305,7 @@ export function App({
     historyModalOpen;
 
   useEffect(() => {
-    setState(store.getState());
-    const unsubscribe = store.subscribe(() => {
-      setState(store.getState());
-    });
     return () => {
-      unsubscribe();
       if (!externalStore) {
         store.destroy();
       }
@@ -126,25 +337,6 @@ export function App({
       }
     };
   }, [pwa, externalPwa]);
-
-  // Defer PWA update toast while a workout timer is actively running so it never distracts mid-set.
-  useEffect(() => {
-    const canPrompt = pwaState.updateAvailable && state.timer.status !== 'running';
-    if (canPrompt && updateToastIdRef.current === null) {
-      updateToastIdRef.current = store.pushToast('Update available', 'info', {
-        persistent: true,
-        action: {
-          label: 'Refresh',
-          onClick: () => {
-            void pwa.applyUpdate();
-          },
-        },
-      });
-    } else if (!pwaState.updateAvailable && updateToastIdRef.current !== null) {
-      store.dismissToast(updateToastIdRef.current);
-      updateToastIdRef.current = null;
-    }
-  }, [pwaState.updateAvailable, state.timer.status, store, pwa]);
 
   // Lock page scroll while Floor Mode is active so bottom-half taps never shift the top visual.
   useEffect(() => {
@@ -188,82 +380,21 @@ export function App({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [store, foldable, anyModalOpen]);
 
-  const currentStep = state.timeline[state.timer.currentIndex] ?? state.timeline[0]!;
-  const nextStep = state.timeline[state.timer.currentIndex + 1] ?? null;
-
-  const previewExercise =
-    state.previewExerciseItem ??
-    (state.previewExerciseId
-      ? (state.activeRoutine.exercises.find((ex) => ex.id === state.previewExerciseId) ?? null)
-      : null);
-
-  const highlightedExerciseId = previewExercise
-    ? previewExercise.id
-    : currentStep.phase === 'WORK'
-      ? currentStep.exercise.id
-      : null;
-
-  const handleExportJson = (): void => {
-    downloadJsonBackup(store.exportJson());
-    store.pushToast('Backup JSON downloaded!');
-  };
-
-  const handleImportFile = (file: File): void => {
-    void readBackupFile(file).then((result) => {
-      if (result.ok) {
-        store.importJson(result.text);
-      } else {
-        store.pushToast(result.error, 'error');
-      }
-    });
-  };
-
   return (
-    <>
+    <WorkoutStoreProvider store={store}>
+      <PwaUpdateBridge pwa={pwa} pwaState={pwaState} />
+
       {floorMode.active ? (
-        <Suspense fallback={null}>
-          <FlexWorkoutView
-            routineName={state.activeRoutine.name}
-            currentStep={currentStep}
-            nextStep={nextStep}
-            totalSteps={state.timeline.length}
-            timer={state.timer}
-            previewExercise={previewExercise}
-            demoSpeed={state.activeRoutine.settings.demoSpeed}
-            stagePaused={anyModalOpen}
-            soundEnabled={state.activeRoutine.settings.soundEnabled}
-            voiceEnabled={state.activeRoutine.settings.voiceEnabled}
-            voiceSupported={state.voiceSupported}
-            activation={floorMode.activation}
-            onToggleStartPause={() => store.toggleStartPause()}
-            onPrev={() => store.stepBackward()}
-            onNext={() => store.stepForward()}
-            onReset={() => store.reset()}
-            onToggleSound={() => store.toggleSound()}
-            onToggleVoice={() => store.toggleVoice()}
-            onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
-            onClearPreview={() => store.clearPreview()}
-            onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
-            onExitFloorMode={() => foldable.exitFloorMode()}
-          />
-        </Suspense>
+        <ConnectedFlexView
+          floorMode={floorMode}
+          stagePaused={anyModalOpen}
+          onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
+          onExitFloorMode={() => foldable.exitFloorMode()}
+        />
       ) : (
         <>
-          <HeaderBar
-            currentStep={currentStep}
-            totalSteps={state.timeline.length}
-            totalDurationSec={state.totalDurationSec}
-            timer={state.timer}
-            soundEnabled={state.activeRoutine.settings.soundEnabled}
-            voiceEnabled={state.activeRoutine.settings.voiceEnabled}
-            voiceSupported={state.voiceSupported}
+          <ConnectedHeaderBar
             floorModeActive={floorMode.active}
-            onToggleStartPause={() => store.toggleStartPause()}
-            onPrev={() => store.stepBackward()}
-            onNext={() => store.stepForward()}
-            onReset={() => store.reset()}
-            onToggleSound={() => store.toggleSound()}
-            onToggleVoice={() => store.toggleVoice()}
             onToggleFloorMode={() => foldable.toggleFloorMode()}
             onOpenSettings={() => {
               setReturnToNewWorkout(false);
@@ -274,120 +405,54 @@ export function App({
           />
 
           <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-            <WorkoutStage
-              routineName={state.activeRoutine.name}
-              currentStep={currentStep}
-              nextStep={nextStep}
-              previewExercise={previewExercise}
-              isCompleted={state.timer.status === 'completed'}
-              demoSpeed={state.activeRoutine.settings.demoSpeed}
+            <ConnectedWorkoutStage
               stagePaused={anyModalOpen}
-              onSetDemoSpeed={(speed) => store.setDemoSpeed(speed)}
-              onClearPreview={() => store.clearPreview()}
               onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
             />
 
-            <RoutineSidebar
-              exercises={state.activeRoutine.exercises}
-              highlightedExerciseId={highlightedExerciseId}
+            <ConnectedRoutineSidebar
               onAddExercise={() => {
                 setEditingExercise(null);
                 setExerciseModalOpen(true);
               }}
               onOpenLibrary={() => setLibraryModalOpen(true)}
-              onPreviewExercise={(id) => store.previewExercise(id)}
-              onMoveExercise={(index, delta) => store.moveExercise(index, delta)}
-              onToggleExercise={(id) => store.toggleExerciseActive(id)}
               onEditExercise={(exercise) => {
                 setEditingExercise(exercise);
                 setExerciseModalOpen(true);
               }}
-              onDeleteExercise={(id) => store.deleteExercise(id)}
             />
           </main>
         </>
       )}
 
-      <Suspense fallback={null}>
-        {newWorkoutModalOpen && (
-          <NewWorkoutModal
-            open={newWorkoutModalOpen}
-            currentSettings={state.activeRoutine.settings}
-            userExercises={state.activeRoutine.exercises}
-            spaces={state.data.spaces}
-            activeSpace={state.activeSpace}
-            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
-            onManageSpaces={() => {
-              setReturnToNewWorkout(true);
-              setNewWorkoutModalOpen(false);
-              setSettingsTab('spaces');
-              setSettingsModalOpen(true);
-            }}
-            onClose={() => setNewWorkoutModalOpen(false)}
-            onApply={(preset, autoStart) => store.applyWorkoutPreset(preset, { autoStart })}
-          />
-        )}
+      <AppModals
+        newWorkoutModalOpen={newWorkoutModalOpen}
+        libraryModalOpen={libraryModalOpen}
+        exerciseModalOpen={exerciseModalOpen}
+        editingExercise={editingExercise}
+        settingsModalOpen={settingsModalOpen}
+        settingsTab={settingsTab}
+        historyModalOpen={historyModalOpen}
+        onCloseNewWorkout={() => setNewWorkoutModalOpen(false)}
+        onManageSpaces={() => {
+          setReturnToNewWorkout(true);
+          setNewWorkoutModalOpen(false);
+          setSettingsTab('spaces');
+          setSettingsModalOpen(true);
+        }}
+        onCloseLibrary={() => setLibraryModalOpen(false)}
+        onCloseExercise={() => setExerciseModalOpen(false)}
+        onCloseSettings={() => {
+          setSettingsModalOpen(false);
+          if (returnToNewWorkout) {
+            setReturnToNewWorkout(false);
+            setNewWorkoutModalOpen(true);
+          }
+        }}
+        onCloseHistory={() => setHistoryModalOpen(false)}
+      />
 
-        {libraryModalOpen && (
-          <ExerciseLibraryModal
-            open={libraryModalOpen}
-            userExercises={state.activeRoutine.exercises}
-            activeRoutineExerciseIds={state.activeRoutine.exercises.map((ex) => ex.id)}
-            activeSpace={state.activeSpace}
-            demoSpeed={state.activeRoutine.settings.demoSpeed}
-            onClose={() => setLibraryModalOpen(false)}
-            onPreviewOnStage={(exercise) => store.previewCatalogExercise(exercise)}
-            onAddToRoutine={(exercise) => store.addCatalogExercise(exercise)}
-          />
-        )}
-
-        {exerciseModalOpen && (
-          <ExerciseModal
-            open={exerciseModalOpen}
-            editingExercise={editingExercise}
-            onClose={() => setExerciseModalOpen(false)}
-            onSave={(input) => store.saveExercise(input)}
-          />
-        )}
-
-        {settingsModalOpen && (
-          <SettingsModal
-            open={settingsModalOpen}
-            initialTab={settingsTab}
-            settings={state.activeRoutine.settings}
-            voiceSupported={state.voiceSupported}
-            spaces={state.data.spaces}
-            activeSpaceId={state.activeSpace.id}
-            onClose={() => {
-              setSettingsModalOpen(false);
-              if (returnToNewWorkout) {
-                setReturnToNewWorkout(false);
-                setNewWorkoutModalOpen(true);
-              }
-            }}
-            onSave={(next) => store.updateSettings(next)}
-            onTestBeep={() => store.testAudioBeep()}
-            onTestVoice={() => store.testVoice()}
-            onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
-            onSaveSpace={(input) => store.saveSpace(input)}
-            onDeleteSpace={(spaceId) => store.deleteSpace(spaceId)}
-            onExportJson={handleExportJson}
-            onImportFile={handleImportFile}
-            onRestoreDefaults={() => store.restoreDefaultExercises()}
-          />
-        )}
-
-        {historyModalOpen && (
-          <HistoryModal
-            open={historyModalOpen}
-            history={state.data.history}
-            onClose={() => setHistoryModalOpen(false)}
-            onLogManualSession={() => store.logManualSession()}
-          />
-        )}
-      </Suspense>
-
-      <ToastHost toasts={state.toasts} onDismiss={(id) => store.dismissToast(id)} />
-    </>
+      <ConnectedToastHost />
+    </WorkoutStoreProvider>
   );
 }
