@@ -47,6 +47,22 @@ for (const vp of VIEWPORTS) {
     await page.goto('/');
     await expect(page.getByTestId('active-exercise-title')).toBeVisible();
     await expectZeroHorizontalOverflow(page, `${vp.name} initial`);
+    const clippedCues = await page.evaluate(() => {
+      const labels = Array.from(
+        document.querySelectorAll('[data-testid="live-rep-cue"] li > span:last-child'),
+      );
+      return labels
+        .map((el) => {
+          const style = window.getComputedStyle(el);
+          return {
+            text: el.textContent ?? '',
+            textOverflow: style.textOverflow,
+            clipped: el.scrollWidth > el.clientWidth + 1,
+          };
+        })
+        .filter((item) => item.textOverflow === 'ellipsis' || item.clipped);
+    });
+    expect(clippedCues, `Rep cue badges truncated on ${vp.name}`).toEqual([]);
     if (vp.width >= 1280) {
       const headerBox = await page.locator('header').boundingBox();
       expect(headerBox).not.toBeNull();
