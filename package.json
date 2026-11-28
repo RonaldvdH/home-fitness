@@ -22,7 +22,8 @@
     "@base-ui/react": "^1.9.0",
     "clsx": "^2.1.1",
     "preact": "^11.2.0",
-    "tailwind-merge": "^3.7.1"
+    "tailwind-merge": "^3.7.1",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
@@ -30,6 +31,7 @@
     "@tailwindcss/vite": "^4.1.4",
     "@testing-library/preact": "^3.2.6",
     "@types/node": "^26.6.11",
+    "@types/three": "^0.187.0",
     "happy-dom": "^21.0.4",
     "oxfmt": "^0.80.0",
     "oxlint": "^1.95.0",

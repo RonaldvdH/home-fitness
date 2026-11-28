@@ -96,6 +96,7 @@ Keep modules strictly organized by responsibility:
 │   │   └── timeline.ts         # Pure timeline builder, duration calculation, MM:SS formatting
 │   ├── engine/
 │   │   ├── animations.ts       # Pure typed 60 FPS SVG pose registry & easing math
+│   │   ├── kinematics3d.ts     # Pure 3D kinematics & analytical 2-bone IK pose registry (zero DOM/WebGL)
 │   │   └── timer.ts            # Drift-free wall-clock timer state machine (injectable clock)
 │   ├── services/
 │   │   ├── storage.ts          # StorageAdapter seam + LocalStorageAdapter + JSON backup helpers
@@ -110,8 +111,12 @@ Keep modules strictly organized by responsibility:
 │       ├── HeaderBar.tsx       # Compact mobile-first timer pill, transport, Floor Mode & audio/voice toggles
 │       ├── FlexWorkoutView.tsx # Galaxy Z Flip Flex / Floor Mode split layout (top display, bottom controls)
 │       ├── WorkoutStage.tsx    # Active/preview exercise stage, New Workout bar, form cues, Up Next
-│       ├── AthleteSvg.tsx      # 60 FPS ref-driven SVG renderer (zero per-frame Preact re-renders)
-│       ├── RoutineSidebar.tsx  # Exercise list controls (preview, reorder, toggle, edit, delete, backup)
+│       ├── ExerciseDemonstrator.tsx # Unified 3D/2D demonstrator seam with lazy Stage3D & WebGL fallback
+│       ├── AthleteSvg.tsx      # 60 FPS ref-driven 2D SVG fallback renderer (zero per-frame re-renders)
+│       ├── stage3d/
+│       │   ├── Stage3D.tsx         # Lazy-loaded Preact wrapper hosting the 60 FPS Three.js 3D canvas
+│       │   └── threeScene.ts       # Procedural stylized 3D mannequin, props, lighting & pointer orbit
+│       ├── RoutineSidebar.tsx  # Exercise list controls (preview, reorder, toggle, edit, delete, browser)
 │       ├── ToastHost.tsx       # Accessible live-region toast notifications
 │       ├── ui/
 │       │   ├── dialog.tsx          # shadcn + Base UI Dialog primitive (@base-ui/react/dialog)
@@ -129,7 +134,9 @@ Keep modules strictly organized by responsibility:
 └── tests/
     ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync
     ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & Space matrix checks
+    ├── exercise-demonstrator.test.tsx # WebGL fallback, compact 2D & 3D/2D toggle tests
     ├── foldable.test.ts        # Viewport Segments auto-detection & manual Floor Mode state machine
+    ├── kinematics3d.test.ts    # Pure 3D IK, floor clearance, supination & prop invariants (all 28 moves)
     ├── modal-dialog.test.tsx   # Base UI Dialog rendering, close button & Escape dismissal
     ├── schema.test.ts          # Schema v4 validation, v2/v3 -> v4 migration, Space & tag inference
     ├── presets.test.ts         # Space equipment filtering, weight substitution, shuffle & durations
@@ -144,12 +151,12 @@ Keep modules strictly organized by responsibility:
 1. **Keep Domain & Engine Logic Pure & Testable**:
    - Everything in `src/domain/` and `src/engine/` must remain free of DOM (`document`/`window`) and UI (`preact`) dependencies so it can be tested directly and deterministically in Vitest (enforced by `tests/architecture.test.ts`).
 2. **Never Trigger 60 FPS Preact Re-Renders**:
-   - `AthleteSvg.tsx` (and future `Stage3D.tsx`) mutates refs/GPU buffers directly inside `requestAnimationFrame` and pauses while `document.hidden`. Keep per-frame animation math inside `src/engine/`.
+   - `AthleteSvg.tsx` and `stage3d/Stage3D.tsx` mutate refs/GPU transforms directly inside `requestAnimationFrame` and pause while `document.hidden` (or modal-covered). Keep per-frame animation math inside `src/engine/`.
 3. **Preserve Offline-First Persistence & Backwards Compatibility**:
    - All persistence goes through the `StorageAdapter` interface in `src/services/storage.ts` (enforced by `tests/architecture.test.ts`).
    - Any schema evolution must increment `SCHEMA_VERSION` in `src/domain/schema.ts` and preserve automatic lossless migration from all prior versions and JSON backups.
 4. **Adding a New Exercise or Animation**:
-   - Animations: add the new key to `ANIMATION_IDS` in `src/domain/schema.ts` and implement its entry in `ANIMATION_REGISTRY` in `src/engine/animations.ts` (`ANIMATION_OPTIONS`, `ExerciseModal`, and `tests/animations.test.ts` update automatically).
+   - Animations: add the new key to `ANIMATION_IDS` in `src/domain/schema.ts` and implement its entries in both `ANIMATION_REGISTRY` (`src/engine/animations.ts`) and `ANIMATION_3D_REGISTRY` (`src/engine/kinematics3d.ts`) (`ANIMATION_OPTIONS`, `ExerciseModal`, `tests/animations.test.ts`, and `tests/kinematics3d.test.ts` update automatically).
    - Exercises: tag every catalog exercise with accurate `muscleGroups`, `durations`, `requiredEquipment`, `styles`, ≥ 3 clear steps, and a concise `tip` (enforced by `tests/catalog.contract.test.ts`).
 5. **Respect Narrow Mobile & Foldable Ergonomics**:
    - Design for `360px` unfolded mobile screens (e.g., Galaxy Z Flip) with **zero horizontal overflow** (enforced by `e2e/mobile-and-flows.spec.ts`). Always add `min-w-0` on CSS Grid/Flex children with truncating content.

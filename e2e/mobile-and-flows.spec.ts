@@ -312,3 +312,91 @@ test('All Exercises Browser (360x800): search, filter, live 60 FPS preview, and 
   await expect(page.getByTestId('active-exercise-title')).not.toHaveText('Band Pull-Aparts');
   expect(errors).toEqual([]);
 });
+
+test('3D Exercise Demonstrator (360x800): WebGL canvas renders, orbits + resets, and toggles 2D/3D', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  const demonstrator = page.getByTestId('exercise-demonstrator');
+  await expect(demonstrator).toHaveAttribute('data-mode', '3d');
+
+  // Lazy Stage3D chunk mounts WebGL canvas with non-zero bounding box
+  const canvas = page.getByTestId('stage-3d-canvas');
+  await expect(canvas).toBeVisible();
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  expect(canvasBox!.width).toBeGreaterThanOrEqual(240);
+  expect(canvasBox!.height).toBeGreaterThanOrEqual(200);
+
+  // Drag on 3D stage to orbit -> Reset View button appears and restores camera
+  await page.mouse.move(canvasBox!.x + canvasBox!.width / 2, canvasBox!.y + canvasBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    canvasBox!.x + canvasBox!.width / 2 + 70,
+    canvasBox!.y + canvasBox!.height / 2 - 20,
+    { steps: 6 },
+  );
+  await page.mouse.up();
+  const resetViewBtn = page.getByTestId('stage-3d-reset-view');
+  await expect(resetViewBtn).toBeVisible();
+  await resetViewBtn.click();
+  await expect(resetViewBtn).toBeHidden();
+
+  // Switch cleanly to 2D SVG and back to 3D WebGL
+  await page.getByTestId('demonstrator-mode-2d').click();
+  await expect(demonstrator).toHaveAttribute('data-mode', '2d');
+  await expect(page.locator('svg[aria-label="Animated exercise form demonstrator"]')).toBeVisible();
+
+  await page.getByTestId('demonstrator-mode-3d').click();
+  await expect(demonstrator).toHaveAttribute('data-mode', '3d');
+  await expect(page.getByTestId('stage-3d-canvas')).toBeVisible();
+
+  await expectZeroHorizontalOverflow(page, '360x800 3D stage');
+  expect(errors).toEqual([]);
+});
+
+test('3D Demonstrator graceful fallback (360x800): uses 2D SVG with zero errors when WebGL is unavailable', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.addInitScript(() => {
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function mockedGetContext(
+      this: HTMLCanvasElement,
+      type: string,
+      ...args: unknown[]
+    ) {
+      if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
+        return null;
+      }
+      return (origGetContext as (...a: unknown[]) => RenderingContext | null).call(
+        this,
+        type,
+        ...args,
+      );
+    } as typeof HTMLCanvasElement.prototype.getContext;
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  const demonstrator = page.getByTestId('exercise-demonstrator');
+  await expect(demonstrator).toHaveAttribute('data-mode', '2d');
+  await expect(page.locator('svg[aria-label="Animated exercise form demonstrator"]')).toBeVisible();
+  await expect(page.getByTestId('stage-3d-canvas')).toHaveCount(0);
+  await expectZeroHorizontalOverflow(page, '360x800 2D fallback');
+  expect(errors).toEqual([]);
+});

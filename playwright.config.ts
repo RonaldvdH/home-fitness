@@ -28,7 +28,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
-    ...(executablePath ? { launchOptions: { executablePath } } : {}),
+    launchOptions: {
+      ...(executablePath ? { executablePath } : {}),
+      args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+    },
   },
   projects: [
     {

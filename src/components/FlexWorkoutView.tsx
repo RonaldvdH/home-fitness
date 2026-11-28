@@ -8,7 +8,7 @@ import {
 import { formatMMSS } from '../domain/timeline';
 import type { TimerSnapshot } from '../engine/timer';
 import type { FloorModeActivation } from '../services/foldable';
-import { AthleteSvg } from './AthleteSvg';
+import { ExerciseDemonstrator } from './ExerciseDemonstrator';
 
 export interface FlexWorkoutViewProps {
   routineName: string;
@@ -18,6 +18,7 @@ export interface FlexWorkoutViewProps {
   timer: TimerSnapshot;
   previewExercise: Exercise | null;
   demoSpeed: number;
+  stagePaused?: boolean;
   soundEnabled: boolean;
   voiceEnabled: boolean;
   voiceSupported: boolean;
@@ -83,6 +84,7 @@ export function FlexWorkoutView({
   timer,
   previewExercise,
   demoSpeed,
+  stagePaused = false,
   soundEnabled,
   voiceEnabled,
   voiceSupported,
@@ -213,17 +215,18 @@ export function FlexWorkoutView({
           </div>
         </div>
 
-        {/* Full-Bleed 60 FPS Athlete Stage */}
-        <div class="relative flex-1 min-h-0 w-full flex items-center justify-center px-3 pb-2">
-          <AthleteSvg
+        {/* Full-Bleed 60 FPS 3D/2D Athlete Stage */}
+        <div class="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 pb-1">
+          <ExerciseDemonstrator
             animationType={activeExercise.animationType}
             speedMultiplier={demoSpeed}
             weightLabel={weightLabel}
             variant="flex"
+            paused={stagePaused}
           />
 
           {isPreview && (
-            <span class="absolute bottom-2.5 left-3 px-2 py-0.5 rounded-md bg-purple-950/90 border border-purple-400/50 text-[11px] font-bold uppercase tracking-wider text-purple-200">
+            <span class="absolute top-1 left-3 z-20 px-2 py-0.5 rounded-md bg-purple-950/90 border border-purple-400/50 text-[11px] font-bold uppercase tracking-wider text-purple-200">
               Preview
             </span>
           )}

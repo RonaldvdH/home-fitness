@@ -10,7 +10,7 @@ import {
   type MuscleGroupTag,
   type WorkoutSpace,
 } from '../../domain/schema';
-import { AthleteSvg } from '../AthleteSvg';
+import { ExerciseDemonstrator } from '../ExerciseDemonstrator';
 import { ModalDialog } from './ModalDialog';
 
 export interface ExerciseLibraryModalProps {
@@ -181,11 +181,11 @@ export function ExerciseLibraryModal({
             class="grid grid-cols-1 sm:grid-cols-12 gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800"
           >
             <div class="sm:col-span-5 stage-spotlight relative h-48 sm:h-52 rounded-xl border border-slate-800/80 overflow-hidden flex items-center justify-center px-2 pt-2 pb-9">
-              <AthleteSvg
+              <ExerciseDemonstrator
                 animationType={selectedExercise.animationType}
                 speedMultiplier={demoSpeed}
                 weightLabel={formatDumbbellWeight(selectedExercise.equipment)}
-                variant="flex"
+                variant="compact"
               />
             </div>
 

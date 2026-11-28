@@ -1,6 +1,6 @@
 # ADR-0002: Procedural 3D Stylized Mannequin (Three.js) with 2D SVG Fallback
 
-- **Status**: Accepted (Planned for Phase 4)
+- **Status**: Accepted (Implemented in Phase 4)
 - **Date**: 2026-11-26
 
 ## Context

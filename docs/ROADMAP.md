@@ -14,8 +14,8 @@ This document is the authoritative, repo-resident development roadmap for **Home
 | **Phase 1** | AI Quality Guardrail Foundation     | Repo-enforced Playwright viewport/overflow tests (Galaxy Z Flip 360px + desktop), `oxlint --deny-warnings`, pure-domain import boundary checks, bundle-size budget              | **Completed** |
 | **Phase 2** | Flip Phone Flex / Floor Mode        | Auto-detected foldable split (`vertical-viewport-segments: 2`) + manual 1-tap Floor Mode toggle: top half full-bleed animation + giant timer, bottom half thumb controls & cues | **Completed** |
 | **Phase 3** | Workout Spaces & Expanded Equipment | Schema v4 (`spaces[]`, `requiredEquipment[]`, `styles[]`), named Spaces in New Workout overlay, expanded catalog for elastic bands, wall, floor/mat, foam roller, bodyweight    | **Completed** |
-| **Phase 4** | Real-Time 3D Exercise Demonstrator  | Lazy-loaded Three.js WebGL stylized 3D mannequin with mat/wall/props, true 3D joint biomechanics, auto camera angles + touch-to-orbit, graceful 2D SVG fallback                 | **Next**      |
-| **Phase 5** | Pilates & Mobility / Recovery Track | Workout Style selector (`Strength`, `Pilates`, `Mobility`) in New Workout overlay, partner-friendly Pilates/mat/roller/band catalog, slower breath-paced tempo cues             | Planned       |
+| **Phase 4** | Real-Time 3D Exercise Demonstrator  | Lazy-loaded Three.js WebGL stylized 3D mannequin with mat/wall/props, true 3D joint biomechanics, auto camera angles + touch-to-orbit, graceful 2D SVG fallback                 | **Completed** |
+| **Phase 5** | Pilates & Mobility / Recovery Track | Workout Style selector (`Strength`, `Pilates`, `Mobility`) in New Workout overlay, partner-friendly Pilates/mat/roller/band catalog, slower breath-paced tempo cues             | **Next**      |
 | **Phase 6** | Progression & Delight Polish        | Streaks/weekly history heatmap from ISO `history[]`, gentle weight-progression nudges per Space, refined breath/transition audio chimes, optional sync via `StorageAdapter`     | Planned       |
 
 ---
