@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 import type { AnimationId } from '../domain/schema';
 import { getAnimationDefinition } from '../engine/animations';
 import { AthleteSvg } from './AthleteSvg';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const LazyStage3D = lazy(() => import('./stage3d/Stage3D').then((m) => ({ default: m.Stage3D })));
 
@@ -121,18 +122,20 @@ export function ExerciseDemonstrator({
 
   const stageCanvas =
     effectiveMode === '3d' ? (
-      <Suspense fallback={svgFallback}>
-        <LazyStage3D
-          animationType={animationType}
-          muscleGroup={muscleGroup}
-          speedMultiplier={speedMultiplier}
-          weightLabel={weightLabel}
-          variant={isFlex ? 'flex' : 'default'}
-          paused={paused}
-          onCueIndexChange={isFlex ? undefined : handleCueIndexChange}
-          onFallback={handleFallback}
-        />
-      </Suspense>
+      <ErrorBoundary fallback={svgFallback} onError={handleFallback}>
+        <Suspense fallback={svgFallback}>
+          <LazyStage3D
+            animationType={animationType}
+            muscleGroup={muscleGroup}
+            speedMultiplier={speedMultiplier}
+            weightLabel={weightLabel}
+            variant={isFlex ? 'flex' : 'default'}
+            paused={paused}
+            onCueIndexChange={isFlex ? undefined : handleCueIndexChange}
+            onFallback={handleFallback}
+          />
+        </Suspense>
+      </ErrorBoundary>
     ) : (
       svgFallback
     );

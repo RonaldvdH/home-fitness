@@ -15,7 +15,22 @@ export default defineConfig({
       { find: /^use-sync-external-store\/shim$/, replacement: 'preact/compat' },
     ],
   },
-  plugins: [preact()],
+  plugins: [
+    preact(),
+    {
+      name: 'vitest-virtual-pwa-stub',
+      resolveId(id) {
+        if (id === 'virtual:pwa-register') return '\0virtual:pwa-register';
+        return null;
+      },
+      load(id) {
+        if (id === '\0virtual:pwa-register') {
+          return 'export function registerSW() { return async () => {}; }';
+        }
+        return null;
+      },
+    },
+  ],
   test: {
     environment: 'happy-dom',
     globals: false,

@@ -1,11 +1,17 @@
 import { lazy, Suspense } from 'preact/compat';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { Exercise } from '../domain/schema';
+import { downloadJsonBackup, readBackupFile } from '../services/backup';
 import {
   createFoldableController,
   type FloorModeSnapshot,
   type FoldableController,
 } from '../services/foldable';
+import {
+  createPwaUpdateController,
+  type PwaUpdateController,
+  type PwaUpdateSnapshot,
+} from '../services/pwa';
 import {
   createWorkoutStore,
   type WorkoutStore,
@@ -39,6 +45,7 @@ const SettingsModal = lazy(() =>
 export interface AppProps {
   store?: WorkoutStore;
   foldable?: FoldableController;
+  pwa?: PwaUpdateController;
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
@@ -47,7 +54,11 @@ function isEditableElement(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
 }
 
-export function App({ store: externalStore, foldable: externalFoldable }: AppProps) {
+export function App({
+  store: externalStore,
+  foldable: externalFoldable,
+  pwa: externalPwa,
+}: AppProps) {
   const store = useMemo(() => externalStore ?? createWorkoutStore(), [externalStore]);
   const [state, setState] = useState<WorkoutStoreState>(() => store.getState());
 
@@ -56,6 +67,10 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
     [externalFoldable],
   );
   const [floorMode, setFloorMode] = useState<FloorModeSnapshot>(() => foldable.getSnapshot());
+
+  const pwa = useMemo(() => externalPwa ?? createPwaUpdateController(), [externalPwa]);
+  const [pwaState, setPwaState] = useState<PwaUpdateSnapshot>(() => pwa.getSnapshot());
+  const updateToastIdRef = useRef<number | null>(null);
 
   const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
   const [libraryModalOpen, setLibraryModalOpen] = useState(false);
@@ -98,6 +113,38 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
       }
     };
   }, [foldable, externalFoldable]);
+
+  useEffect(() => {
+    setPwaState(pwa.getSnapshot());
+    const unsubscribe = pwa.subscribe(() => {
+      setPwaState(pwa.getSnapshot());
+    });
+    return () => {
+      unsubscribe();
+      if (!externalPwa) {
+        pwa.destroy();
+      }
+    };
+  }, [pwa, externalPwa]);
+
+  // Defer PWA update toast while a workout timer is actively running so it never distracts mid-set.
+  useEffect(() => {
+    const canPrompt = pwaState.updateAvailable && state.timer.status !== 'running';
+    if (canPrompt && updateToastIdRef.current === null) {
+      updateToastIdRef.current = store.pushToast('Update available', 'info', {
+        persistent: true,
+        action: {
+          label: 'Refresh',
+          onClick: () => {
+            void pwa.applyUpdate();
+          },
+        },
+      });
+    } else if (!pwaState.updateAvailable && updateToastIdRef.current !== null) {
+      store.dismissToast(updateToastIdRef.current);
+      updateToastIdRef.current = null;
+    }
+  }, [pwaState.updateAvailable, state.timer.status, store, pwa]);
 
   // Lock page scroll while Floor Mode is active so bottom-half taps never shift the top visual.
   useEffect(() => {
@@ -157,31 +204,18 @@ export function App({ store: externalStore, foldable: externalFoldable }: AppPro
       : null;
 
   const handleExportJson = (): void => {
-    const payload = store.exportJson();
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'dumbbell-circuit-backup.json';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadJsonBackup(store.exportJson());
     store.pushToast('Backup JSON downloaded!');
   };
 
   const handleImportFile = (file: File): void => {
-    const reader = new FileReader();
-    reader.addEventListener(
-      'load',
-      () => {
-        if (typeof reader.result === 'string') {
-          store.importJson(reader.result);
-        } else {
-          store.pushToast('Could not read backup file.', 'error');
-        }
-      },
-      { once: true },
-    );
-    reader.readAsText(file);
+    void readBackupFile(file).then((result) => {
+      if (result.ok) {
+        store.importJson(result.text);
+      } else {
+        store.pushToast(result.error, 'error');
+      }
+    });
   };
 
   return (

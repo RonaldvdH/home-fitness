@@ -48,10 +48,22 @@ import { createWakeLockController, type WakeLockController } from '../services/w
 
 export type ToastVariant = 'info' | 'success' | 'error';
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+export interface ToastOptions {
+  persistent?: boolean;
+  action?: ToastAction;
+}
+
 export interface ToastItem {
   id: number;
   message: string;
   variant: ToastVariant;
+  persistent?: boolean;
+  action?: ToastAction;
 }
 
 export interface ExerciseFormInput {
@@ -129,7 +141,7 @@ export interface WorkoutStore {
   logManualSession: () => void;
   exportJson: () => string;
   importJson: (jsonText: string) => boolean;
-  pushToast: (message: string, variant?: ToastVariant) => void;
+  pushToast: (message: string, variant?: ToastVariant, options?: ToastOptions) => number;
   dismissToast: (id: number) => void;
   destroy: () => void;
 }
@@ -158,6 +170,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
   let previewExerciseItem: Exercise | null = null;
   let toasts: ToastItem[] = [];
   let nextToastId = 1;
+  let storageWarningShown = false;
   const toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   const listeners = new Set<Listener>();
@@ -183,19 +196,40 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
     listeners.forEach((listener) => listener());
   }
 
-  function persistData(): void {
-    storage.save(data);
+  function persistData(): boolean {
+    const saved = storage.save(data);
+    if (!saved && !storageWarningShown) {
+      storageWarningShown = true;
+      pushToast('Could not save to browser storage. Export a JSON backup in Settings.', 'error', {
+        persistent: true,
+      });
+    }
+    return saved;
   }
 
-  function pushToast(message: string, variant: ToastVariant = 'info'): void {
+  function pushToast(
+    message: string,
+    variant: ToastVariant = 'info',
+    options?: ToastOptions,
+  ): number {
     const id = nextToastId++;
-    toasts = [...toasts, { id, message, variant }];
+    const item: ToastItem = {
+      id,
+      message,
+      variant,
+      ...(options?.persistent ? { persistent: true } : {}),
+      ...(options?.action ? { action: options.action } : {}),
+    };
+    toasts = [...toasts, item];
     notify();
 
-    const handle = setTimeout(() => {
-      dismissToast(id);
-    }, 3200);
-    toastTimers.set(id, handle);
+    if (!options?.persistent) {
+      const handle = setTimeout(() => {
+        dismissToast(id);
+      }, 3200);
+      toastTimers.set(id, handle);
+    }
+    return id;
   }
 
   function dismissToast(id: number): void {
@@ -716,6 +750,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
 
     destroy() {
       timer.destroy();
+      audio.dispose();
       voice.cancel();
       void wakeLock.release();
       toastTimers.forEach((handle) => clearTimeout(handle));

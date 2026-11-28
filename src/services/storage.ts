@@ -142,3 +142,51 @@ export function parseBackupJson(jsonText: string, fallbackData: AppDataV4): Pars
   }
   return parseAppData(parsed, fallbackData);
 }
+
+/**
+ * Safely capture raw localStorage entries for emergency recovery exports inside ErrorBoundary.
+ */
+export function readRawStorageSnapshot(
+  storage: Pick<Storage, 'getItem'> | null = typeof window !== 'undefined'
+    ? window.localStorage
+    : null,
+): string | null {
+  if (!storage) return null;
+  try {
+    const rawV4 = storage.getItem(V4_STORAGE_KEY);
+    if (rawV4) return rawV4;
+    const rawV3 = storage.getItem(V3_STORAGE_KEY);
+    if (rawV3) return rawV3;
+    const legacy = {
+      exercises: safeParseJson(storage.getItem(LEGACY_V2_KEYS.EXERCISES)),
+      settings: safeParseJson(storage.getItem(LEGACY_V2_KEYS.SETTINGS)),
+      history: safeParseJson(storage.getItem(LEGACY_V2_KEYS.HISTORY)),
+    };
+    if (legacy.exercises || legacy.settings || legacy.history) {
+      return JSON.stringify(legacy, null, 2);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remove all Home Fitness Studio localStorage keys during an explicit user-confirmed reset.
+ */
+export function clearAppStorage(
+  storage: Pick<Storage, 'removeItem'> | null = typeof window !== 'undefined'
+    ? window.localStorage
+    : null,
+): void {
+  if (!storage) return;
+  try {
+    storage.removeItem(V4_STORAGE_KEY);
+    storage.removeItem(V3_STORAGE_KEY);
+    storage.removeItem(LEGACY_V2_KEYS.EXERCISES);
+    storage.removeItem(LEGACY_V2_KEYS.SETTINGS);
+    storage.removeItem(LEGACY_V2_KEYS.HISTORY);
+  } catch {
+    // Ignore storage errors when clearing during recovery.
+  }
+}
