@@ -4,10 +4,9 @@ import {
   normalizeSessionRecord,
   normalizeSettings,
   parseAppData,
-  SCHEMA_VERSION,
-  type AppDataV4,
   type ParseImportResult,
-} from '../domain/schema';
+} from '../domain/migrations';
+import { SCHEMA_VERSION, type AppDataV4 } from '../domain/schema';
 
 export const V4_STORAGE_KEY = 'home_fitness_app_v4';
 export const V3_STORAGE_KEY = 'home_fitness_app_v3';

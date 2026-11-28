@@ -7,14 +7,16 @@
 import { cloneDefaultExercises } from '../domain/defaults';
 import type { GeneratedWorkoutPreset } from '../domain/presets';
 import {
-  applySpaceToExercise,
-  MAX_HISTORY_RECORDS,
   normalizeDurationTags,
   normalizeEquipment,
   normalizeMuscleGroupTags,
   normalizeRequiredEquipment,
   normalizeWorkoutSpace,
   normalizeWorkoutStyles,
+} from '../domain/migrations';
+import {
+  applySpaceToExercise,
+  MAX_HISTORY_RECORDS,
   type AnimationId,
   type AppDataV4,
   type EquipmentSpec,
