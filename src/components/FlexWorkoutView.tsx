@@ -1,14 +1,28 @@
 import { cn } from '@/lib/utils';
-import {
-  formatDumbbellWeight,
-  type Exercise,
-  type TimelinePhase,
-  type TimelineStep,
-} from '../domain/schema';
+import { formatDumbbellWeight, type Exercise, type TimelineStep } from '../domain/schema';
 import { formatMMSS } from '../domain/timeline';
 import type { TimerSnapshot } from '../engine/timer';
 import type { FloorModeActivation } from '../services/foldable';
 import { ExerciseDemonstrator } from './ExerciseDemonstrator';
+import {
+  BoltIcon,
+  CloseIcon,
+  NextStepIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevStepIcon,
+  ResetIcon,
+  SoundOffIcon,
+  SoundOnIcon,
+  VoiceMicIcon,
+} from './icons';
+import {
+  computeTimerProgress,
+  resolvePhaseStyle,
+  resolveSpotlightClass,
+  resolveStartButtonLabel,
+  RING_CIRCUMFERENCE,
+} from './phaseTheme';
 
 export interface FlexWorkoutViewProps {
   routineName: string;
@@ -34,39 +48,6 @@ export interface FlexWorkoutViewProps {
   onOpenNewWorkout: () => void;
   onExitFloorMode: () => void;
 }
-
-const PHASE_BADGE_STYLES: Record<TimelinePhase, { badge: string; stroke: string; label: string }> =
-  {
-    'WARM-UP': {
-      badge: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
-      stroke: '#fbbf24',
-      label: 'WARM-UP',
-    },
-    WORK: {
-      badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
-      stroke: '#10b981',
-      label: 'WORK',
-    },
-    REST: {
-      badge: 'bg-sky-500/20 text-sky-300 border-sky-400/40',
-      stroke: '#38bdf8',
-      label: 'REST',
-    },
-    'COOL-DOWN': {
-      badge: 'bg-purple-500/20 text-purple-300 border-purple-400/40',
-      stroke: '#c084fc',
-      label: 'COOL-DOWN',
-    },
-  };
-
-const STAGE_SPOTLIGHT_MAP: Record<TimelinePhase, string> = {
-  'WARM-UP': 'stage-spotlight-warmup',
-  WORK: 'stage-spotlight',
-  REST: 'stage-spotlight-rest',
-  'COOL-DOWN': 'stage-spotlight',
-};
-
-const RING_CIRCUMFERENCE = 87.96;
 
 /**
  * Galaxy Z Flip Flex / Floor Mode split layout (ADR-0003).
@@ -109,35 +90,16 @@ export function FlexWorkoutView({
   const activeExercise = previewExercise ?? currentStep.exercise;
   const weightLabel = formatDumbbellWeight(activeExercise.equipment);
 
-  const phaseStyle = isCompleted
-    ? {
-        badge: 'bg-emerald-500 text-slate-950 border-emerald-400',
-        stroke: '#10b981',
-        label: 'DONE!',
-      }
-    : PHASE_BADGE_STYLES[currentStep.phase];
-
-  const spotlightClass = isPreview
-    ? 'stage-spotlight-preview'
-    : isCompleted
-      ? 'stage-spotlight'
-      : STAGE_SPOTLIGHT_MAP[currentStep.phase];
-
-  const stepDurationMs = Math.max(1, currentStep.duration * 1000);
-  const ratio = isCompleted ? 0 : Math.max(0, Math.min(1, timer.remainingMs / stepDurationMs));
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - ratio);
-
-  const overallPct = isCompleted
-    ? 100
-    : Math.round(((timer.currentIndex + (1 - ratio)) / Math.max(1, totalSteps)) * 100);
-
-  const startButtonLabel = isRunning
-    ? 'Pause'
-    : isCompleted
-      ? 'Restart'
-      : timer.status === 'idle'
-        ? 'Start'
-        : 'Resume';
+  const phaseStyle = resolvePhaseStyle(currentStep.phase, isCompleted, 'flex');
+  const spotlightClass = resolveSpotlightClass(currentStep.phase, isPreview, isCompleted);
+  const { strokeDashoffset, overallPct } = computeTimerProgress(
+    timer.remainingMs,
+    currentStep.duration,
+    timer.currentIndex,
+    totalSteps,
+    isCompleted,
+  );
+  const startButtonLabel = resolveStartButtonLabel(timer.status);
 
   return (
     <div
@@ -156,7 +118,6 @@ export function FlexWorkoutView({
           spotlightClass,
         )}
       >
-        {/* Top HUD Strip: Phase + Round on Left | Giant Countdown Timer on Right */}
         <div class="relative z-10 px-3.5 sm:px-6 pt-2.5 pb-1 flex items-center justify-between gap-2 shrink-0">
           <div class="flex flex-col gap-1 min-w-0">
             <div class="flex items-center gap-1.5 min-w-0">
@@ -215,7 +176,6 @@ export function FlexWorkoutView({
           </div>
         </div>
 
-        {/* Full-Bleed 60 FPS 3D/2D Athlete Stage */}
         <div class="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 pb-1">
           <ExerciseDemonstrator
             animationType={activeExercise.animationType}
@@ -233,7 +193,6 @@ export function FlexWorkoutView({
           )}
         </div>
 
-        {/* Hinge-edge overall progress bar */}
         <div class="w-full h-1 bg-slate-900/90 shrink-0">
           <div
             class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
@@ -242,7 +201,7 @@ export function FlexWorkoutView({
         </div>
       </section>
 
-      {/* BOTTOM HALF — Flat floor control deck: Utility bar + Exercise/Tip + Up Next + Giant Transport */}
+      {/* BOTTOM HALF — Flat floor control deck */}
       <section
         data-slot="flex-bottom-segment"
         data-testid="flex-bottom-segment"
@@ -259,16 +218,7 @@ export function FlexWorkoutView({
               title={`Active routine: ${routineName} — start a new workout`}
               class="px-2.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 font-bold text-xs flex items-center gap-1 shrink-0 transition active:scale-95"
             >
-              <svg
-                class="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                aria-hidden="true"
-              >
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
+              <BoltIcon />
               <span>Workout</span>
             </button>
 
@@ -297,32 +247,7 @@ export function FlexWorkoutView({
               title="Toggle Interval Beeps (M)"
               class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition active:scale-95"
             >
-              {soundEnabled ? (
-                <svg
-                  class="w-4 h-4 text-emerald-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-                </svg>
-              ) : (
-                <svg
-                  class="w-4 h-4 text-rose-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                  <line x1="23" y1="9" x2="17" y2="15" />
-                  <line x1="17" y1="9" x2="23" y2="15" />
-                </svg>
-              )}
+              {soundEnabled ? <SoundOnIcon /> : <SoundOffIcon />}
             </button>
 
             {voiceSupported && (
@@ -334,19 +259,9 @@ export function FlexWorkoutView({
                 title="Toggle Voice Announcements (V)"
                 class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 transition active:scale-95"
               >
-                <svg
+                <VoiceMicIcon
                   class={cn('w-4 h-4', voiceEnabled ? 'text-sky-400' : 'text-slate-500')}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
-                >
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
+                />
               </button>
             )}
 
@@ -357,16 +272,7 @@ export function FlexWorkoutView({
               title="Exit Floor Mode (F)"
               class="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-xs flex items-center gap-1 transition active:scale-95"
             >
-              <svg
-                class="w-3.5 h-3.5 text-slate-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.2"
-                aria-hidden="true"
-              >
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
+              <CloseIcon class="w-3.5 h-3.5 text-slate-400" />
               <span>Exit</span>
             </button>
           </div>
@@ -463,17 +369,7 @@ export function FlexWorkoutView({
             title="Previous Step (Left Arrow)"
             class="h-13 w-13 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 flex items-center justify-center shrink-0 transition active:scale-95"
           >
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              aria-hidden="true"
-            >
-              <polygon points="19 20 9 12 19 4 19 20" />
-              <line x1="5" y1="19" x2="5" y2="5" />
-            </svg>
+            <PrevStepIcon class="w-5 h-5" />
           </button>
 
           <button
@@ -483,14 +379,9 @@ export function FlexWorkoutView({
             class="flex-1 h-13 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition active:scale-[0.98]"
           >
             {isRunning ? (
-              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
+              <PauseIcon class="w-5 h-5 fill-current" />
             ) : (
-              <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
+              <PlayIcon class="w-5 h-5 fill-current" />
             )}
             <span>{startButtonLabel}</span>
           </button>
@@ -503,17 +394,7 @@ export function FlexWorkoutView({
             title="Next Step (Right Arrow)"
             class="h-13 w-13 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 flex items-center justify-center shrink-0 transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
           >
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              aria-hidden="true"
-            >
-              <polygon points="5 4 15 12 5 20 5 4" />
-              <line x1="19" y1="5" x2="19" y2="19" />
-            </svg>
+            <NextStepIcon class="w-5 h-5" />
           </button>
 
           <button
@@ -523,17 +404,7 @@ export function FlexWorkoutView({
             title="Reset Circuit"
             class="h-13 w-13 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-rose-400 flex items-center justify-center shrink-0 transition active:scale-95"
           >
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.4"
-              aria-hidden="true"
-            >
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
+            <ResetIcon class="w-5 h-5" />
           </button>
         </div>
       </section>

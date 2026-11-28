@@ -22,9 +22,8 @@ import {
   type WorkoutStore,
   type WorkoutStoreState,
 } from '../state/workoutStore';
-import { AppModals } from './AppModals';
+import { AppModals, type ActiveModal } from './AppModals';
 import { HeaderBar } from './HeaderBar';
-import type { SettingsTab } from './modals/SettingsModal';
 import { RoutineSidebar } from './RoutineSidebar';
 import { ToastHost } from './ToastHost';
 import { WorkoutStage } from './WorkoutStage';
@@ -288,21 +287,8 @@ export function App({
   const pwa = useMemo(() => externalPwa ?? createPwaUpdateController(), [externalPwa]);
   const [pwaState, setPwaState] = useState<PwaUpdateSnapshot>(() => pwa.getSnapshot());
 
-  const [newWorkoutModalOpen, setNewWorkoutModalOpen] = useState(false);
-  const [libraryModalOpen, setLibraryModalOpen] = useState(false);
-  const [returnToNewWorkout, setReturnToNewWorkout] = useState(false);
-  const [exerciseModalOpen, setExerciseModalOpen] = useState(false);
-  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general');
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
-
-  const anyModalOpen =
-    newWorkoutModalOpen ||
-    libraryModalOpen ||
-    exerciseModalOpen ||
-    settingsModalOpen ||
-    historyModalOpen;
+  const [modal, setModal] = useState<ActiveModal>({ kind: 'none' });
+  const anyModalOpen = modal.kind !== 'none';
 
   useEffect(() => {
     return () => {
@@ -388,7 +374,7 @@ export function App({
         <ConnectedFlexView
           floorMode={floorMode}
           stagePaused={anyModalOpen}
-          onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
+          onOpenNewWorkout={() => setModal({ kind: 'new-workout' })}
           onExitFloorMode={() => foldable.exitFloorMode()}
         />
       ) : (
@@ -396,61 +382,26 @@ export function App({
           <ConnectedHeaderBar
             floorModeActive={floorMode.active}
             onToggleFloorMode={() => foldable.toggleFloorMode()}
-            onOpenSettings={() => {
-              setReturnToNewWorkout(false);
-              setSettingsTab('general');
-              setSettingsModalOpen(true);
-            }}
-            onOpenHistory={() => setHistoryModalOpen(true)}
+            onOpenSettings={() => setModal({ kind: 'settings', tab: 'general' })}
+            onOpenHistory={() => setModal({ kind: 'history' })}
           />
 
           <main class="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
             <ConnectedWorkoutStage
               stagePaused={anyModalOpen}
-              onOpenNewWorkout={() => setNewWorkoutModalOpen(true)}
+              onOpenNewWorkout={() => setModal({ kind: 'new-workout' })}
             />
 
             <ConnectedRoutineSidebar
-              onAddExercise={() => {
-                setEditingExercise(null);
-                setExerciseModalOpen(true);
-              }}
-              onOpenLibrary={() => setLibraryModalOpen(true)}
-              onEditExercise={(exercise) => {
-                setEditingExercise(exercise);
-                setExerciseModalOpen(true);
-              }}
+              onAddExercise={() => setModal({ kind: 'exercise', editing: null })}
+              onOpenLibrary={() => setModal({ kind: 'library' })}
+              onEditExercise={(exercise) => setModal({ kind: 'exercise', editing: exercise })}
             />
           </main>
         </>
       )}
 
-      <AppModals
-        newWorkoutModalOpen={newWorkoutModalOpen}
-        libraryModalOpen={libraryModalOpen}
-        exerciseModalOpen={exerciseModalOpen}
-        editingExercise={editingExercise}
-        settingsModalOpen={settingsModalOpen}
-        settingsTab={settingsTab}
-        historyModalOpen={historyModalOpen}
-        onCloseNewWorkout={() => setNewWorkoutModalOpen(false)}
-        onManageSpaces={() => {
-          setReturnToNewWorkout(true);
-          setNewWorkoutModalOpen(false);
-          setSettingsTab('spaces');
-          setSettingsModalOpen(true);
-        }}
-        onCloseLibrary={() => setLibraryModalOpen(false)}
-        onCloseExercise={() => setExerciseModalOpen(false)}
-        onCloseSettings={() => {
-          setSettingsModalOpen(false);
-          if (returnToNewWorkout) {
-            setReturnToNewWorkout(false);
-            setNewWorkoutModalOpen(true);
-          }
-        }}
-        onCloseHistory={() => setHistoryModalOpen(false)}
-      />
+      <AppModals modal={modal} onChangeModal={setModal} />
 
       <ConnectedToastHost />
     </WorkoutStoreProvider>

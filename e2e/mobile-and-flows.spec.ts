@@ -400,3 +400,58 @@ test('3D Demonstrator graceful fallback (360x800): uses 2D SVG with zero errors 
   await expectZeroHorizontalOverflow(page, '360x800 2D fallback');
   expect(errors).toEqual([]);
 });
+
+test('Offline PWA resilience (360x800): reloads and runs workouts with zero errors while offline', async ({
+  page,
+  context,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  // Wait for the Vite PWA service worker to activate and control the page.
+  await page.evaluate(async () => {
+    if ('serviceWorker' in navigator) {
+      await navigator.serviceWorker.ready;
+    }
+  });
+  const hasController = await page.evaluate(() => Boolean(navigator.serviceWorker?.controller));
+  if (!hasController) {
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(async () => {
+      if ('serviceWorker' in navigator) {
+        await navigator.serviceWorker.ready;
+      }
+    });
+  }
+
+  try {
+    await context.setOffline(true);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Circuit Studio' })).toBeVisible();
+    await expect(page.getByTestId('active-exercise-title')).toBeVisible();
+
+    // Start & pause timer completely offline
+    const startBtn = page.getByRole('button', { name: 'Start' });
+    await startBtn.click();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible();
+    await page.getByRole('button', { name: 'Pause' }).click();
+
+    // Open New Workout modal & build a circuit completely offline
+    await page.getByRole('button', { name: 'New Workout' }).click();
+    await expect(page.getByRole('heading', { name: 'Start a New Workout' })).toBeVisible();
+    await page.getByRole('button', { name: 'Load & Preview' }).click();
+    await expect(page.getByRole('heading', { name: 'Start a New Workout' })).toBeHidden();
+
+    await expectZeroHorizontalOverflow(page, '360x800 offline PWA');
+    expect(errors).toEqual([]);
+  } finally {
+    await context.setOffline(false);
+  }
+});
