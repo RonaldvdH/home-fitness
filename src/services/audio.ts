@@ -12,6 +12,7 @@ export interface AudioCoach {
   beepWorkStart: () => void;
   beepRestStart: () => void;
   beepComplete: () => void;
+  dispose: () => void;
 }
 
 export function createAudioCoach(initialEnabled = true): AudioCoach {
@@ -87,6 +88,15 @@ export function createAudioCoach(initialEnabled = true): AudioCoach {
       playTone(659.25, 0.15, 'triangle', 0.13, 0.25);
       playTone(783.99, 0.15, 'triangle', 0.26, 0.25);
       playTone(1046.5, 0.42, 'triangle', 0.39, 0.32);
+    },
+    dispose() {
+      if (ctx) {
+        const current = ctx;
+        ctx = null;
+        if (current.state !== 'closed') {
+          void current.close().catch(() => {});
+        }
+      }
     },
   };
 }

@@ -10,6 +10,10 @@ import { describe, expect, it } from 'vitest';
 const ROOT = resolve(process.cwd());
 const SRC_DIR = join(ROOT, 'src');
 
+function normalizeRelPath(filePath: string): string {
+  return relative(ROOT, filePath).replaceAll('\\', '/');
+}
+
 function collectFiles(dir: string, predicate: (filePath: string) => boolean): string[] {
   const results: string[] = [];
   for (const entry of readdirSync(dir)) {
@@ -49,7 +53,7 @@ describe('architecture & repo-rule guardrails', () => {
     for (const dir of pureDirs) {
       const files = collectFiles(dir, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
       for (const file of files) {
-        const rel = relative(ROOT, file);
+        const rel = normalizeRelPath(file);
         const raw = readFileSync(file, 'utf8');
         const code = stripComments(raw);
 
@@ -76,7 +80,7 @@ describe('architecture & repo-rule guardrails', () => {
     const violations: string[] = [];
 
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = normalizeRelPath(file);
       if (rel === 'src/services/storage.ts') continue;
       const code = stripComments(readFileSync(file, 'utf8'));
       if (/\blocalStorage\b/.test(code)) {
@@ -93,7 +97,7 @@ describe('architecture & repo-rule guardrails', () => {
     const violations: string[] = [];
 
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = normalizeRelPath(file);
       const code = stripComments(readFileSync(file, 'utf8'));
       if (rel.endsWith('/ModalDialog.tsx')) {
         if (!code.includes('@/components/ui/dialog')) {
@@ -127,7 +131,7 @@ describe('architecture & repo-rule guardrails', () => {
     for (const dir of restrictedDirs) {
       const files = collectFiles(dir, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
       for (const file of files) {
-        const rel = relative(ROOT, file);
+        const rel = normalizeRelPath(file);
         const code = stripComments(readFileSync(file, 'utf8'));
         if (/\bsetInterval\s*\(/.test(code)) {
           violations.push(
@@ -152,7 +156,7 @@ describe('architecture & repo-rule guardrails', () => {
     const files = collectFiles(SRC_DIR, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
     const unknownRefs: string[] = [];
     for (const file of files) {
-      const rel = relative(ROOT, file);
+      const rel = normalizeRelPath(file);
       const raw = readFileSync(file, 'utf8');
       for (const match of raw.matchAll(/guideline-exception:\s*(EX-\d{3})/g)) {
         const id = match[1]!;
@@ -163,5 +167,31 @@ describe('architecture & repo-rule guardrails', () => {
     }
 
     expect(unknownRefs).toEqual([]);
+  });
+
+  it('keeps index.html free of external CDN stylesheet/script URLs for true offline-first behavior', () => {
+    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+    const externalRefs = Array.from(
+      html.matchAll(/\b(?:href|src)=["'](https?:\/\/[^"']+)["']/gi),
+    ).map((m) => m[1]!);
+    expect(externalRefs).toEqual([]);
+  });
+
+  it('isolates browser file I/O and service-worker APIs to src/services/ rather than UI components', () => {
+    const componentsDir = join(SRC_DIR, 'components');
+    const files = collectFiles(componentsDir, (p) => p.endsWith('.ts') || p.endsWith('.tsx'));
+    const forbidden = /\b(FileReader|createObjectURL|serviceWorker)\b/;
+    const violations: string[] = [];
+
+    for (const file of files) {
+      const rel = normalizeRelPath(file);
+      const code = stripComments(readFileSync(file, 'utf8'));
+      const match = forbidden.exec(code);
+      if (match) {
+        violations.push(`${rel}: browser I/O API "${match[1]}" must live in src/services/`);
+      }
+    }
+
+    expect(violations).toEqual([]);
   });
 });
