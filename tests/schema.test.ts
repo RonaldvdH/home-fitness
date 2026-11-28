@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultAppData, DEFAULT_SPACES } from '../src/domain/defaults';
 import {
-  applySpaceToExercise,
-  isExerciseEligibleForSpace,
   normalizeEquipment,
   normalizeExercise,
   normalizeSettings,
   normalizeWorkoutSpace,
   parseAppData,
+} from '../src/domain/migrations';
+import {
+  applySpaceToExercise,
+  isExerciseEligibleForSpace,
   SCHEMA_VERSION,
 } from '../src/domain/schema';
 import {

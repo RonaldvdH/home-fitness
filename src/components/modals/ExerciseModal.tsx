@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { inferMuscleGroupTags } from '../../domain/migrations';
 import {
   EQUIPMENT_TAG_LABELS,
   EQUIPMENT_TAGS,
-  inferMuscleGroupTags,
   MUSCLE_GROUP_TAGS,
   WORKOUT_DURATIONS,
   type AnimationId,
