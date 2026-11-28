@@ -15,6 +15,7 @@ export interface AthleteSvgProps {
   weightLabel: string | null;
   variant?: 'default' | 'flex';
   hideBadge?: boolean;
+  onCueIndexChange?: (cueIndex: 0 | 1 | 2 | 3) => void;
 }
 
 function setLineAttrs(
@@ -89,10 +90,10 @@ export function AthleteSvg({
   weightLabel,
   variant = 'default',
   hideBadge = false,
+  onCueIndexChange,
 }: AthleteSvgProps) {
   const showDumbbells = weightLabel !== null;
 
-  const cueRef = useRef<HTMLDivElement>(null);
   const floorRef = useRef<SVGLineElement>(null);
   const motionGuideRef = useRef<SVGPathElement>(null);
   const headRef = useRef<SVGCircleElement>(null);
@@ -124,12 +125,15 @@ export function AthleteSvg({
   );
   const speedRef = useRef<number>(speedMultiplier);
   const showDumbbellsRef = useRef<boolean>(showDumbbells);
+  const onCueIndexChangeRef = useRef(onCueIndexChange);
+  const lastCueIndexRef = useRef<number>(-1);
   const phaseTimeRef = useRef<number>(0);
 
   animTypeRef.current = animationType;
   highlightsRef.current = resolveMuscleHighlights(animationType, muscleGroup);
   speedRef.current = speedMultiplier;
   showDumbbellsRef.current = showDumbbells;
+  onCueIndexChangeRef.current = onCueIndexChange;
 
   useEffect(() => {
     const applyHighlights = (highlights: MuscleHighlightMap, atPeak: boolean): void => {
@@ -153,14 +157,15 @@ export function AthleteSvg({
 
     const applyPose = (
       pose: AthletePose,
-      cue: string,
+      cueIndex: 0 | 1 | 2 | 3,
       includeDumbbells: boolean,
       progress: number,
     ): void => {
       applyHighlights(highlightsRef.current, progress > 0.45);
 
-      if (cueRef.current && cueRef.current.textContent !== cue) {
-        cueRef.current.textContent = cue;
+      if (cueIndex !== lastCueIndexRef.current) {
+        lastCueIndexRef.current = cueIndex;
+        onCueIndexChangeRef.current?.(cueIndex);
       }
 
       if (floorRef.current) {
@@ -324,7 +329,7 @@ export function AthleteSvg({
 
     // Paint initial frame immediately so first paint and unit tests are accurate.
     const initial = computeAnimationFrame(animTypeRef.current, 0);
-    applyPose(initial.pose, initial.cue, showDumbbellsRef.current, initial.progress);
+    applyPose(initial.pose, initial.cueIndex, showDumbbellsRef.current, initial.progress);
 
     let rafId: number | null = null;
     let lastTimestamp = 0;
@@ -347,7 +352,7 @@ export function AthleteSvg({
       const rawT = phaseTimeRef.current / cycleDuration;
 
       const frame = computeAnimationFrame(animTypeRef.current, rawT);
-      applyPose(frame.pose, frame.cue, showDumbbellsRef.current, frame.progress);
+      applyPose(frame.pose, frame.cueIndex, showDumbbellsRef.current, frame.progress);
 
       rafId = requestAnimationFrame(tick);
     };
@@ -362,6 +367,7 @@ export function AthleteSvg({
   // Re-sync immediately when exercise type, muscle highlight, or weight visibility changes.
   useEffect(() => {
     phaseTimeRef.current = 0;
+    lastCueIndexRef.current = 0;
     const frame = computeAnimationFrame(animationType, 0);
     const highlights = resolveMuscleHighlights(animationType, muscleGroup);
     highlightsRef.current = highlights;
@@ -381,7 +387,7 @@ export function AthleteSvg({
     setRegionStroke(leftForearmRef.current, 'forearms', highlights, false);
     setRegionStroke(rightForearmRef.current, 'forearms', highlights, false);
 
-    if (cueRef.current) cueRef.current.textContent = frame.cue;
+    onCueIndexChangeRef.current?.(frame.cueIndex);
     if (dumbbellLeftRef.current) {
       dumbbellLeftRef.current.style.display =
         showDumbbells && frame.pose.leftArm && !frame.pose.hideLeftDumbbell ? 'inline' : 'none';
@@ -407,18 +413,6 @@ export function AthleteSvg({
           </span>
         </div>
       )}
-
-      <div
-        ref={cueRef}
-        data-testid="live-rep-cue"
-        class={
-          isFlex
-            ? 'absolute bottom-2.5 right-3 max-w-[65%] truncate px-2.5 py-1 rounded-lg bg-slate-950/85 border border-slate-700/80 text-xs font-mono font-semibold text-emerald-300 shadow-lg'
-            : 'absolute top-2.5 right-3 sm:top-3.5 sm:right-4 max-w-[52%] truncate px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-mono font-semibold text-emerald-300'
-        }
-      >
-        Controlled Tempo
-      </div>
 
       {!isFlex && (
         <div
