@@ -5,7 +5,7 @@
  */
 
 import { ANIMATION_IDS, type AnimationId } from '../domain/schema';
-import { ANIMATION_REGISTRY, getSmoothCycle, lerp, smoothstep } from './animations';
+import { ANIMATION_REGISTRY, getCueIndex, getSmoothCycle, lerp, smoothstep } from './animations';
 
 export interface Vec3 {
   x: number;
@@ -83,12 +83,15 @@ export interface RigPose3D {
   leftLeg: LegPose3D;
   rightLeg: LegPose3D;
   cameraPreset: CameraPresetId;
+  /** Orientation of the gym mat's long axis ('x' by default, 'z' when facing/lying along Z). */
+  matAxis?: 'x' | 'z';
   prop: PropSpec3D;
 }
 
 export interface Animation3DFrame {
   pose: RigPose3D;
   cue: string;
+  cueIndex: 0 | 1 | 2 | 3;
   progress: number;
 }
 
@@ -411,11 +414,10 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'bicep-curl',
     cameraPreset: 'three-quarter',
     computePose: (p) => {
-      // True 3D forearm supination: bottom neutral hammer grip (axis Z) -> top palms-up (axis X).
+      // True 3D forearm supination: bottom neutral hammer grip -> top palms-up,
+      // rotating symmetrically outward on each side while staying perpendicular to each forearm.
       const supination = smoothstep(0.12, 0.82, p);
       const angle = supination * (Math.PI / 2);
-      const lAxis = v3(Math.sin(angle), 0, Math.cos(angle));
-      const rAxis = v3(Math.sin(angle), 0, Math.cos(angle));
 
       const curlTheta = lerp(0.08, 2.38, p);
       const elbowY = 1.01;
@@ -433,16 +435,34 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
         elbowZ + Math.sin(curlTheta) * forearmLen,
       );
 
-      return buildStandingFrontPose({
+      const pose = buildStandingFrontPose({
         leftHand: lHand,
         rightHand: rHand,
         leftPole: v3(0.25, -0.65, -0.7),
         rightPole: v3(-0.25, -0.65, -0.7),
-        leftDumbbellAxis: lAxis,
-        rightDumbbellAxis: rAxis,
         cameraPreset: 'three-quarter',
         prop: { kind: 'dumbbells', count: 2 },
       });
+
+      // Construct an orthonormal grip plane perpendicular to each solved forearm vector.
+      // Neutral (hammer) grip has thumb pointing forward/up in the sagittal plane;
+      // supination rotates the thumb outward (+X on left, -X on right) and pinky inward toward the body.
+      const computeSupinatedAxis = (arm: ArmPose3D, sideSign: 1 | -1): Vec3 => {
+        const forearmDir = normalize3(sub3(arm.hand, arm.elbow), v3(0, -1, 0));
+        const neutralAxis = normalize3(v3(0, forearmDir.z, -forearmDir.y), v3(0, 0, 1));
+        const supinatedOutward = normalize3(
+          scale3(cross3(neutralAxis, forearmDir), sideSign),
+          v3(sideSign, 0, 0),
+        );
+        return normalize3(
+          add3(scale3(supinatedOutward, Math.sin(angle)), scale3(neutralAxis, Math.cos(angle))),
+          v3(sideSign, 0, 0),
+        );
+      };
+
+      pose.leftArm.dumbbellAxis = computeSupinatedAxis(pose.leftArm, 1);
+      pose.rightArm.dumbbellAxis = computeSupinatedAxis(pose.rightArm, -1);
+      return pose;
     },
   },
 
@@ -645,12 +665,12 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'floor-press',
     cameraPreset: 'floor-three-quarter',
     computePose: (p) => {
-      const pelvis = v3(0.05, 0.13, 0);
-      const chest = v3(-0.41, 0.14, 0);
-      const head = v3(-0.61, 0.15, 0);
+      const pelvis = v3(0.05, 0.09, 0);
+      const chest = v3(-0.41, 0.095, 0);
+      const head = v3(-0.61, 0.108, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(0, 1, 0));
 
-      const handY = lerp(0.36, 0.63, p);
+      const handY = lerp(0.32, 0.59, p);
       const handZ = lerp(0.26, 0.18, p);
       return {
         ...f,
@@ -678,9 +698,9 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'glute-bridge',
     cameraPreset: 'floor-low',
     computePose: (p) => {
-      const chest = v3(-0.4, 0.14, 0);
-      const pelvis = v3(lerp(0.06, 0.04, p), lerp(0.13, 0.4, p), 0);
-      const head = v3(-0.6, 0.14, 0);
+      const chest = v3(-0.4, 0.095, 0);
+      const pelvis = v3(lerp(0.06, 0.04, p), lerp(0.09, 0.36, p), 0);
+      const head = v3(-0.6, 0.108, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(0.2, 0.98, 0));
 
       return {
@@ -719,8 +739,8 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'crunch',
     cameraPreset: 'floor-low',
     computePose: (p) => {
-      const curlAngle = lerp(0.06, 0.72, p);
-      const pelvis = v3(0.06, 0.13, 0);
+      const curlAngle = lerp(0.02, 0.72, p);
+      const pelvis = v3(0.06, 0.09, 0);
       const chest = v3(
         pelvis.x - Math.cos(curlAngle) * RIG_DIMENSIONS.torsoLength,
         pelvis.y + Math.sin(curlAngle) * RIG_DIMENSIONS.torsoLength,
@@ -728,7 +748,7 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
       );
       const head = v3(
         chest.x - Math.cos(curlAngle + 0.35) * RIG_DIMENSIONS.neckHeadOffset,
-        chest.y + Math.sin(curlAngle + 0.35) * RIG_DIMENSIONS.neckHeadOffset,
+        Math.max(0.108, chest.y + Math.sin(curlAngle + 0.35) * RIG_DIMENSIONS.neckHeadOffset),
         0,
       );
       const f = buildSideFrame(pelvis, chest, head, v3(Math.sin(curlAngle + 0.3), 0.9, 0));
@@ -759,9 +779,9 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'leg-raise',
     cameraPreset: 'floor-low',
     computePose: (p) => {
-      const pelvis = v3(-0.08, 0.13, 0);
-      const chest = v3(-0.54, 0.14, 0);
-      const head = v3(-0.74, 0.15, 0);
+      const pelvis = v3(-0.08, 0.09, 0);
+      const chest = v3(-0.54, 0.095, 0);
+      const head = v3(-0.74, 0.108, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(0, 1, 0));
 
       const liftAngle = lerp(0.12, 1.46, p);
@@ -772,8 +792,8 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
 
       return {
         ...f,
-        leftArm: makeArm(f.lShoulder, v3(-0.05, 0.07, -0.22), v3(0, -1, -0.3)),
-        rightArm: makeArm(f.rShoulder, v3(-0.05, 0.07, 0.22), v3(0, -1, 0.3)),
+        leftArm: makeArm(f.lShoulder, v3(-0.05, RIG_DIMENSIONS.handFloorY, -0.22), v3(0, 0.1, -1)),
+        rightArm: makeArm(f.rShoulder, v3(-0.05, RIG_DIMENSIONS.handFloorY, 0.22), v3(0, 0.1, 1)),
         leftLeg: makeLeg(f.lHip, v3(ankleX, ankleY, -0.1), v3(0.2, 1, 0), toeDir),
         rightLeg: makeLeg(f.rHip, v3(ankleX, ankleY, 0.1), v3(0.2, 1, 0), toeDir),
         cameraPreset: 'floor-low',
@@ -786,20 +806,21 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'russian-twist',
     cameraPreset: 'floor-three-quarter',
     computePose: (p) => {
-      // Seated V-sit with genuine 3D torso rotation from right (-X) to left (+X).
+      // Seated twist grounded on the mat with genuine 3D torso rotation from right (-X) to left (+X).
       const twist = lerp(-0.85, 0.85, p);
-      const pelvis = v3(0, 0.14, -0.05);
-      const chest = v3(0, 0.47, -0.36);
-      const head = v3(0, 0.66, -0.42);
+      const pelvis = v3(0, 0.09, -0.05);
+      const chest = v3(0, 0.42, -0.36);
+      const head = v3(0, 0.61, -0.42);
 
       const cosT = Math.cos(twist);
       const sinT = Math.sin(twist);
       const shW = RIG_DIMENSIONS.shoulderHalfWidth;
-      const lShoulder = v3(chest.x + shW * cosT, chest.y - 0.02, chest.z + shW * sinT);
-      const rShoulder = v3(chest.x - shW * cosT, chest.y - 0.02, chest.z - shW * sinT);
+      // Twisting toward +X (athlete's left) pulls the left shoulder back (-Z) and brings the right shoulder forward (+Z).
+      const lShoulder = v3(chest.x + shW * cosT, chest.y - 0.02, chest.z - shW * sinT);
+      const rShoulder = v3(chest.x - shW * cosT, chest.y - 0.02, chest.z + shW * sinT);
 
       // Both hands carry a single dumbbell clearly in front of chest, swinging cleanly side to side.
-      const dbCenter = v3(Math.sin(twist) * 0.39, 0.38, 0.02 + Math.cos(twist) * 0.13);
+      const dbCenter = v3(Math.sin(twist) * 0.39, 0.33, 0.02 + Math.cos(twist) * 0.13);
       const lHand = add3(dbCenter, v3(0.06, 0.01, 0));
       const rHand = add3(dbCenter, v3(-0.06, -0.01, 0));
 
@@ -811,18 +832,19 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
         leftArm: makeArm(lShoulder, lHand, v3(0.45, -0.55, 0.7), v3(0, 1, 0)),
         rightArm: makeArm(rShoulder, rHand, v3(-0.45, -0.55, 0.7), v3(0, 1, 0)),
         leftLeg: makeLeg(
-          v3(0.11, 0.14, -0.02),
-          v3(0.14, 0.24, 0.56),
+          v3(0.11, 0.09, -0.02),
+          v3(0.14, RIG_DIMENSIONS.footSoleY, 0.56),
           v3(0.1, 1, 0),
-          v3(0, 0.7, 0.7),
+          v3(0, 0.75, 0.66),
         ),
         rightLeg: makeLeg(
-          v3(-0.11, 0.14, -0.02),
-          v3(-0.14, 0.24, 0.56),
+          v3(-0.11, 0.09, -0.02),
+          v3(-0.14, RIG_DIMENSIONS.footSoleY, 0.56),
           v3(-0.1, 1, 0),
-          v3(0, 0.7, 0.7),
+          v3(0, 0.75, 0.66),
         ),
         cameraPreset: 'floor-three-quarter',
+        matAxis: 'z',
         prop: { kind: 'dumbbells', count: 1 },
       };
     },
@@ -832,17 +854,17 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'dead-bug',
     cameraPreset: 'floor-low',
     computePose: (p) => {
-      const pelvis = v3(0.06, 0.13, 0);
-      const chest = v3(-0.4, 0.14, 0);
-      const head = v3(-0.6, 0.15, 0);
+      const pelvis = v3(0.06, 0.09, 0);
+      const chest = v3(-0.4, 0.095, 0);
+      const head = v3(-0.6, 0.108, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(0, 1, 0));
 
       // Right arm reaches overhead (-X) while left leg extends forward (+X); left arm + right leg hold tabletop.
-      const rHand = v3(lerp(-0.38, -0.84, p), lerp(0.64, 0.22, p), 0.18);
-      const lHand = v3(-0.38, 0.64, -0.18);
+      const rHand = v3(lerp(-0.38, -0.84, p), lerp(0.6, 0.18, p), 0.18);
+      const lHand = v3(-0.38, 0.6, -0.18);
 
-      const lAnkle = v3(lerp(0.42, 0.84, p), lerp(0.46, 0.16, p), -0.12);
-      const rAnkle = v3(0.42, 0.46, 0.12);
+      const lAnkle = v3(lerp(0.42, 0.84, p), lerp(0.42, 0.14, p), -0.12);
+      const rAnkle = v3(0.42, 0.42, 0.12);
 
       return {
         ...f,
@@ -876,8 +898,8 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
           v3(0.5, 0, -0.8),
         ),
         rightArm: makeArm(f.rShoulder, rHand, v3(0.4, -0.6, 0.7)),
-        leftLeg: makeLeg(f.lHip, v3(0.86, 0.08, -0.16), v3(0, 0.5, -0.2), v3(-0.2, -0.98, 0)),
-        rightLeg: makeLeg(f.rHip, v3(0.86, 0.08, 0.16), v3(0, 0.5, 0.2), v3(-0.2, -0.98, 0)),
+        leftLeg: makeLeg(f.lHip, v3(0.86, 0.08, -0.16), v3(0, -0.5, -0.2), v3(-0.2, -0.98, 0)),
+        rightLeg: makeLeg(f.rHip, v3(0.86, 0.08, 0.16), v3(0, -0.5, 0.2), v3(-0.2, -0.98, 0)),
         cameraPreset: 'floor-three-quarter',
         prop: { kind: 'none' },
       };
@@ -888,11 +910,12 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'push-up',
     cameraPreset: 'floor-three-quarter',
     computePose: (p) => {
+      const xShift = lerp(0, -0.07, p);
       const chestY = lerp(0.54, 0.22, p);
       const pelvisY = lerp(0.42, 0.18, p);
-      const chest = v3(-0.32, chestY, 0);
-      const pelvis = v3(0.13, pelvisY, 0);
-      const head = v3(-0.52, chestY + 0.05, 0);
+      const chest = v3(-0.32 + xShift, chestY, 0);
+      const pelvis = v3(0.13 + xShift, pelvisY, 0);
+      const head = v3(-0.52 + xShift, chestY + 0.05, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(-0.3, -0.95, 0));
 
       return {
@@ -907,8 +930,8 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
           v3(-0.32, RIG_DIMENSIONS.handFloorY, 0.24),
           v3(0.65, 0.35, 0.7),
         ),
-        leftLeg: makeLeg(f.lHip, v3(0.86, 0.08, -0.13), v3(0, 0.5, 0), v3(-0.2, -0.98, 0)),
-        rightLeg: makeLeg(f.rHip, v3(0.86, 0.08, 0.13), v3(0, 0.5, 0), v3(-0.2, -0.98, 0)),
+        leftLeg: makeLeg(f.lHip, v3(0.86, 0.08, -0.13), v3(0, -1, 0), v3(-0.2, -0.98, 0)),
+        rightLeg: makeLeg(f.rHip, v3(0.86, 0.08, 0.13), v3(0, -1, 0), v3(-0.2, -0.98, 0)),
         cameraPreset: 'floor-three-quarter',
         prop: { kind: 'none' },
       };
@@ -919,14 +942,14 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'bird-dog',
     cameraPreset: 'floor-three-quarter',
     computePose: (p) => {
-      const chest = v3(-0.22, 0.52, 0);
-      const pelvis = v3(0.24, 0.51, 0);
-      const head = v3(-0.42, 0.57, 0);
+      const chest = v3(-0.22, 0.48, 0);
+      const pelvis = v3(0.24, 0.47, 0);
+      const head = v3(-0.42, 0.53, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(-0.5, -0.85, 0));
 
       // Right arm reaches forward (-X), left leg extends straight back (+X).
-      const rHand = lerp3(v3(-0.22, RIG_DIMENSIONS.handFloorY, 0.18), v3(-0.74, 0.56, 0.16), p);
-      const lAnkle = lerp3(v3(0.56, 0.07, -0.12), v3(1.02, 0.54, -0.11), p);
+      const rHand = lerp3(v3(-0.22, RIG_DIMENSIONS.handFloorY, 0.18), v3(-0.74, 0.52, 0.16), p);
+      const lAnkle = lerp3(v3(0.56, RIG_DIMENSIONS.footSoleY, -0.12), v3(1.02, 0.5, -0.11), p);
 
       return {
         ...f,
@@ -937,7 +960,12 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
         ),
         rightArm: makeArm(f.rShoulder, rHand, v3(0.2, -0.9, 0.4)),
         leftLeg: makeLeg(f.lHip, lAnkle, v3(-0.2, -0.95, 0), v3(0.95, -0.25, 0)),
-        rightLeg: makeLeg(f.rHip, v3(0.56, 0.07, 0.12), v3(-0.25, -0.95, 0), v3(1, 0, 0)),
+        rightLeg: makeLeg(
+          f.rHip,
+          v3(0.56, RIG_DIMENSIONS.footSoleY, 0.12),
+          v3(-0.25, -0.95, 0),
+          v3(1, 0, 0),
+        ),
         cameraPreset: 'floor-three-quarter',
         prop: { kind: 'none' },
       };
@@ -949,13 +977,13 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     cameraPreset: 'floor-low',
     computePose: (p) => {
       const lift = lerp(0, 0.17, p);
-      const pelvis = v3(0.08, 0.12, 0);
-      const chest = v3(-0.37, 0.14 + lift, 0);
-      const head = v3(-0.56, 0.17 + lift * 1.35, 0);
+      const pelvis = v3(0.08, 0.09, 0);
+      const chest = v3(-0.37, 0.095 + lift, 0);
+      const head = v3(-0.56, 0.115 + lift * 1.35, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(-0.8, -0.5, 0));
 
-      const handY = Math.max(0.08, 0.12 + lift * 1.9);
-      const ankleY = Math.max(0.08, 0.1 + lift * 1.5);
+      const handY = Math.max(RIG_DIMENSIONS.handFloorY, 0.05 + lift * 1.9);
+      const ankleY = Math.max(RIG_DIMENSIONS.footSoleY, 0.05 + lift * 1.5);
       return {
         ...f,
         leftArm: makeArm(f.lShoulder, v3(-0.84, handY, -0.22), v3(0, 0.25, -0.95)),
@@ -1023,13 +1051,13 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     id: 'band-kickback',
     cameraPreset: 'floor-three-quarter',
     computePose: (p) => {
-      const chest = v3(-0.22, 0.52, 0);
-      const pelvis = v3(0.24, 0.51, 0);
-      const head = v3(-0.42, 0.57, 0);
+      const chest = v3(-0.22, 0.48, 0);
+      const pelvis = v3(0.24, 0.47, 0);
+      const head = v3(-0.42, 0.53, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(-0.4, -0.9, 0));
 
       // Right leg presses heel straight back against ankle band.
-      const rAnkle = lerp3(v3(0.56, 0.08, 0.12), v3(1.0, 0.62, 0.12), p);
+      const rAnkle = lerp3(v3(0.56, RIG_DIMENSIONS.footSoleY, 0.12), v3(1.0, 0.58, 0.12), p);
       return {
         ...f,
         leftArm: makeArm(
@@ -1038,7 +1066,12 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
           v3(0.5, 0, -0.8),
         ),
         rightArm: makeArm(f.rShoulder, v3(-0.22, RIG_DIMENSIONS.handFloorY, 0.18), v3(0.5, 0, 0.8)),
-        leftLeg: makeLeg(f.lHip, v3(0.56, 0.08, -0.12), v3(-0.25, -0.95, 0), v3(1, 0, 0)),
+        leftLeg: makeLeg(
+          f.lHip,
+          v3(0.56, RIG_DIMENSIONS.footSoleY, -0.12),
+          v3(-0.25, -0.95, 0),
+          v3(1, 0, 0),
+        ),
         rightLeg: makeLeg(f.rHip, rAnkle, v3(-0.15, -0.95, 0), v3(0.15, -0.98, 0)),
         cameraPreset: 'floor-three-quarter',
         prop: { kind: 'band', mode: 'ankles' },
@@ -1155,11 +1188,11 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
       const rollerX = -0.22;
       const rollerR = RIG_DIMENSIONS.rollerRadius;
       const extAngle = lerp(0.32, -0.2, p);
-      const pelvis = v3(0.14, 0.13, 0);
+      const pelvis = v3(0.14, 0.09, 0);
       const chest = v3(rollerX - 0.1, rollerR * 2 + 0.07 + Math.sin(extAngle) * 0.16, 0);
       const head = v3(
         chest.x - Math.cos(extAngle) * RIG_DIMENSIONS.neckHeadOffset,
-        Math.max(0.14, chest.y + Math.sin(extAngle) * RIG_DIMENSIONS.neckHeadOffset),
+        Math.max(0.11, chest.y + Math.sin(extAngle) * RIG_DIMENSIONS.neckHeadOffset),
         0,
       );
       const f = buildSideFrame(pelvis, chest, head, v3(Math.sin(extAngle + 0.35), 0.95, 0));
@@ -1197,15 +1230,23 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
     computePose: (p) => {
       const shift = lerp(-0.16, 0.16, p);
       const rollerR = RIG_DIMENSIONS.rollerRadius;
-      const chest = v3(-0.34 + shift, 0.33, 0);
-      const pelvis = v3(0.11 + shift, 0.25, 0);
-      const head = v3(-0.52 + shift, 0.37, 0);
+      const chest = v3(-0.34 + shift, 0.31, 0);
+      const pelvis = v3(0.11 + shift, 0.23, 0);
+      const head = v3(-0.52 + shift, 0.35, 0);
       const f = buildSideFrame(pelvis, chest, head, v3(-0.5, -0.85, 0));
 
       return {
         ...f,
-        leftArm: makeArm(f.lShoulder, v3(-0.5 + shift, 0.06, -0.16), v3(0.2, -1, -0.2)),
-        rightArm: makeArm(f.rShoulder, v3(-0.5 + shift, 0.06, 0.16), v3(0.2, -1, 0.2)),
+        leftArm: makeArm(
+          f.lShoulder,
+          v3(-0.5 + shift, RIG_DIMENSIONS.handFloorY, -0.16),
+          v3(0.2, -1, -0.2),
+        ),
+        rightArm: makeArm(
+          f.rShoulder,
+          v3(-0.5 + shift, RIG_DIMENSIONS.handFloorY, 0.16),
+          v3(0.2, -1, 0.2),
+        ),
         leftLeg: makeLeg(f.lHip, v3(0.86 + shift, 0.14, -0.13), v3(0, -1, 0), v3(0.4, -0.9, 0)),
         rightLeg: makeLeg(f.rHip, v3(0.86 + shift, 0.14, 0.13), v3(0, -1, 0), v3(0.4, -0.9, 0)),
         cameraPreset: 'floor-low',
@@ -1272,19 +1313,99 @@ export function computeAnimation3DFrame(animationId: AnimationId, rawT: number):
   const def2d = ANIMATION_REGISTRY[animationId] ?? ANIMATION_REGISTRY['overhead-press'];
   const progress = getSmoothCycle(clampedT);
   const pose = def3d.computePose(progress, clampedT);
+  const cueIndex = getCueIndex(clampedT);
+  const cue = def2d.cues[cueIndex];
 
-  let cue: string;
-  if (clampedT < 0.45) {
-    cue = def2d.cues[0];
-  } else if (clampedT < 0.55) {
-    cue = def2d.cues[1];
-  } else if (clampedT < 0.95) {
-    cue = def2d.cues[2];
-  } else {
-    cue = def2d.cues[3];
-  }
-
-  return { pose, cue, progress };
+  return { pose, cue, cueIndex, progress };
 }
 
 export const ALL_3D_ANIMATION_IDS: readonly AnimationId[] = ANIMATION_IDS;
+
+export type MotionGuideJoint =
+  | 'leftHand'
+  | 'rightHand'
+  | 'midHand'
+  | 'leftAnkle'
+  | 'rightAnkle'
+  | 'pelvis'
+  | 'chest'
+  | 'head';
+
+const MOTION_GUIDE_JOINTS: Record<AnimationId, readonly MotionGuideJoint[]> = {
+  'overhead-press': ['leftHand', 'rightHand'],
+  'bent-row': ['leftHand', 'rightHand'],
+  'bicep-curl': ['leftHand', 'rightHand'],
+  'lateral-raise': ['leftHand', 'rightHand'],
+  'front-raise': ['leftHand', 'rightHand'],
+  'tricep-extension': ['midHand'],
+  squat: ['pelvis'],
+  rdl: ['leftHand', 'rightHand'],
+  'reverse-lunge': ['pelvis', 'leftAnkle'],
+  'floor-press': ['leftHand', 'rightHand'],
+  'glute-bridge': ['pelvis'],
+  crunch: ['chest'],
+  'leg-raise': ['leftAnkle', 'rightAnkle'],
+  'russian-twist': ['midHand'],
+  'dead-bug': ['rightHand', 'leftAnkle'],
+  'plank-tap': ['rightHand'],
+  'push-up': ['chest'],
+  'bird-dog': ['rightHand', 'leftAnkle'],
+  superman: ['rightHand', 'rightAnkle'],
+  'band-pull-apart': ['leftHand', 'rightHand'],
+  'band-row': ['leftHand', 'rightHand'],
+  'band-kickback': ['rightAnkle'],
+  'wall-sit': [],
+  'wall-pushup': ['chest'],
+  'wall-angels': ['leftHand', 'rightHand'],
+  'roller-thoracic': ['head'],
+  'roller-quad': ['pelvis'],
+  'roller-glute': ['pelvis'],
+};
+
+function readMotionGuidePoint(pose: RigPose3D, joint: MotionGuideJoint): Vec3 {
+  switch (joint) {
+    case 'leftHand':
+      return pose.leftArm.hand;
+    case 'rightHand':
+      return pose.rightArm.hand;
+    case 'midHand':
+      return scale3(add3(pose.leftArm.hand, pose.rightArm.hand), 0.5);
+    case 'leftAnkle':
+      return pose.leftLeg.ankle;
+    case 'rightAnkle':
+      return pose.rightLeg.ankle;
+    case 'pelvis':
+      return pose.pelvis;
+    case 'chest':
+      return pose.chest;
+    case 'head':
+      return pose.head;
+  }
+}
+
+/**
+ * Sample clean 3D motion-guide polylines for the primary moving joint(s) of an exercise
+ * across its concentric lift phase (`progress` from 0 -> 1). Isometric holds return `[]`.
+ */
+export function computeMotionGuidePaths3D(animationId: AnimationId, samples = 18): Vec3[][] {
+  const def = ANIMATION_3D_REGISTRY[animationId] ?? ANIMATION_3D_REGISTRY['overhead-press'];
+  const joints = MOTION_GUIDE_JOINTS[animationId] ?? [];
+  if (joints.length === 0 || samples < 2) return [];
+
+  const paths: Vec3[][] = joints.map(() => []);
+  for (let i = 0; i < samples; i += 1) {
+    const progress = i / (samples - 1);
+    const pose = def.computePose(progress, progress * 0.5);
+    for (let j = 0; j < joints.length; j += 1) {
+      paths[j]!.push(readMotionGuidePoint(pose, joints[j]!));
+    }
+  }
+
+  return paths.filter((pts) => {
+    let totalLen = 0;
+    for (let i = 1; i < pts.length; i += 1) {
+      totalLen += dist3(pts[i - 1]!, pts[i]!);
+    }
+    return totalLen >= 0.05;
+  });
+}

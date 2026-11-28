@@ -9,6 +9,7 @@ export interface Stage3DProps {
   weightLabel: string | null;
   variant?: 'default' | 'flex';
   paused?: boolean;
+  onCueIndexChange?: (cueIndex: 0 | 1 | 2 | 3) => void;
   onFallback: () => void;
 }
 
@@ -19,11 +20,13 @@ export function Stage3D({
   weightLabel,
   variant = 'default',
   paused = false,
+  onCueIndexChange,
   onFallback,
 }: Stage3DProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const cueRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<Stage3DController | null>(null);
+  const onCueIndexChangeRef = useRef(onCueIndexChange);
+  onCueIndexChangeRef.current = onCueIndexChange;
   const onFallbackRef = useRef(onFallback);
   onFallbackRef.current = onFallback;
 
@@ -50,10 +53,8 @@ export function Stage3D({
         initialSpeed: initialPropsRef.current.speedMultiplier,
         initialWeightLabel: initialPropsRef.current.weightLabel,
         paused: initialPropsRef.current.paused,
-        onCueChange: (cue) => {
-          if (cueRef.current && cueRef.current.textContent !== cue) {
-            cueRef.current.textContent = cue;
-          }
+        onCueIndexChange: (cueIndex) => {
+          onCueIndexChangeRef.current?.(cueIndex);
         },
         onOrbitChange: (orbited) => {
           setIsOrbited(orbited);
@@ -95,21 +96,9 @@ export function Stage3D({
   return (
     <>
       <div
-        ref={cueRef}
-        data-testid="live-rep-cue"
-        class={
-          isFlex
-            ? 'pointer-events-none absolute bottom-2.5 right-3 z-10 max-w-[65%] truncate px-2.5 py-1 rounded-lg bg-slate-950/85 border border-slate-700/80 text-xs font-mono font-semibold text-emerald-300 shadow-lg'
-            : 'pointer-events-none absolute top-2.5 right-3 sm:top-3.5 sm:right-4 z-10 max-w-[52%] truncate px-2 sm:px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] sm:text-xs font-mono font-semibold text-emerald-300'
-        }
-      >
-        Controlled Tempo
-      </div>
-
-      <div
         ref={hostRef}
         data-testid="stage-3d-host"
-        class={isFlex ? 'w-full h-full min-h-0' : 'w-full h-[270px] sm:h-full sm:min-h-[380px]'}
+        class={isFlex ? 'w-full h-full min-h-0' : 'w-full h-[250px] sm:h-full sm:min-h-[340px]'}
       />
 
       {isOrbited ? (

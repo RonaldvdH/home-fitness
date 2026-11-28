@@ -92,4 +92,26 @@ describe('animations pose registry & math', () => {
     );
     expect(top.motionGuidePath).toContain(`${top.leftArm!.hand.x} ${top.leftArm!.hand.y}`);
   });
+
+  it('grounds 2D floor supine, seated, and prone poses cleanly on the mat line', () => {
+    const floorGroundedIds = [
+      'floor-press',
+      'glute-bridge',
+      'crunch',
+      'leg-raise',
+      'russian-twist',
+      'dead-bug',
+      'superman',
+      'roller-thoracic',
+    ] as const;
+
+    for (const id of floorGroundedIds) {
+      const pose = ANIMATION_REGISTRY[id].computePose(0);
+      // Pelvis circle has r=8.5px; resting torsoHip should sit within 10px of floorY.
+      expect(
+        pose.floorY - pose.torsoHip.y,
+        `${id} 2D pelvis floating above mat`,
+      ).toBeLessThanOrEqual(10);
+    }
+  });
 });

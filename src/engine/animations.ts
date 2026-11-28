@@ -200,19 +200,19 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     computePose(p) {
       return {
         floorY: 236,
-        head: { x: 70, y: 216 },
-        torsoHip: { x: 176, y: 224 },
-        torsoShoulder: { x: 96, y: 224 },
-        clavicleStart: { x: 108, y: 218 },
-        clavicleEnd: { x: 108, y: 228 },
+        head: { x: 70, y: 218 },
+        torsoHip: { x: 176, y: 227 },
+        torsoShoulder: { x: 96, y: 227 },
+        clavicleStart: { x: 108, y: 221 },
+        clavicleEnd: { x: 108, y: 231 },
         legLeft: [
-          { x: 176, y: 224 },
-          { x: 212, y: 174 },
+          { x: 176, y: 227 },
+          { x: 212, y: 177 },
           { x: 240, y: 234 },
         ],
         legRight: [
-          { x: 176, y: 224 },
-          { x: 216, y: 174 },
+          { x: 176, y: 227 },
+          { x: 216, y: 177 },
           { x: 246, y: 234 },
         ],
         footLeft: null,
@@ -222,12 +222,12 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
         ],
         leftArm: null,
         rightArm: {
-          shoulder: { x: 108, y: 218 },
-          elbow: { x: lerp(86, 108, p), y: lerp(228, 180, p) },
-          hand: { x: lerp(90, 108, p), y: lerp(184, 142, p) },
+          shoulder: { x: 108, y: 221 },
+          elbow: { x: lerp(86, 108, p), y: lerp(231, 183, p) },
+          hand: { x: lerp(90, 108, p), y: lerp(187, 145, p) },
           dumbbellAngleDeg: 0,
         },
-        motionGuidePath: 'M 90 184 Q 100 162 108 142',
+        motionGuidePath: 'M 90 187 Q 100 165 108 145',
       };
     },
   },
@@ -523,17 +523,17 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     cues: ['Drive Hips Up', 'Squeeze Glutes', 'Lower Slowly', 'Reset on Mat'],
     computePose(p) {
       const hipX = lerp(174, 172, p);
-      const hipY = lerp(224, 178, p);
+      const hipY = lerp(227, 180, p);
       const kneeX = lerp(212, 218, p);
-      const kneeY = lerp(176, 174, p);
+      const kneeY = lerp(178, 174, p);
 
       return {
         floorY: 236,
         head: { x: 70, y: 218 },
         torsoHip: { x: hipX, y: hipY },
-        torsoShoulder: { x: 100, y: 224 },
-        clavicleStart: { x: 100, y: 220 },
-        clavicleEnd: { x: 100, y: 228 },
+        torsoShoulder: { x: 100, y: 227 },
+        clavicleStart: { x: 100, y: 223 },
+        clavicleEnd: { x: 100, y: 231 },
         legLeft: [
           { x: hipX, y: hipY },
           { x: kneeX - 3, y: kneeY },
@@ -551,12 +551,12 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
         ],
         leftArm: null,
         rightArm: {
-          shoulder: { x: 104, y: 222 },
-          elbow: { x: lerp(138, 138, p), y: lerp(226, 204, p) },
+          shoulder: { x: 104, y: 225 },
+          elbow: { x: lerp(138, 138, p), y: lerp(229, 206, p) },
           hand: { x: hipX, y: hipY - 10 },
           dumbbellAngleDeg: lerp(0, -18, p),
         },
-        motionGuidePath: 'M 174 214 L 172 168',
+        motionGuidePath: 'M 174 217 L 172 170',
       };
     },
   },
@@ -568,26 +568,26 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     cues: ['Curl Shoulders Up', 'Squeeze Abs', 'Lower Slowly', 'Relax Neck'],
     computePose(p) {
       const shX = lerp(102, 132, p);
-      const shY = lerp(222, 178, p);
+      const shY = lerp(226, 180, p);
       const hdX = lerp(74, 118, p);
-      const hdY = lerp(216, 152, p);
-      const hand = quadBezier({ x: 164, y: 202 }, { x: 182, y: 184 }, { x: 198, y: 168 }, p);
+      const hdY = lerp(218, 154, p);
+      const hand = quadBezier({ x: 164, y: 205 }, { x: 182, y: 186 }, { x: 198, y: 170 }, p);
 
       return {
         floorY: 236,
         head: { x: hdX, y: hdY },
-        torsoHip: { x: 180, y: 224 },
+        torsoHip: { x: 180, y: 227 },
         torsoShoulder: { x: shX, y: shY },
         clavicleStart: { x: shX, y: shY - 3 },
         clavicleEnd: { x: shX, y: shY + 4 },
         legLeft: [
-          { x: 180, y: 224 },
-          { x: 214, y: 176 },
+          { x: 180, y: 227 },
+          { x: 214, y: 178 },
           { x: 240, y: 234 },
         ],
         legRight: [
-          { x: 180, y: 224 },
-          { x: 218, y: 176 },
+          { x: 180, y: 227 },
+          { x: 218, y: 178 },
           { x: 246, y: 234 },
         ],
         footLeft: null,
@@ -598,11 +598,11 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
         leftArm: null,
         rightArm: {
           shoulder: { x: shX + 4, y: shY + 2 },
-          elbow: { x: lerp(134, 166, p), y: lerp(212, 174, p) },
+          elbow: { x: lerp(134, 166, p), y: lerp(215, 176, p) },
           hand,
           dumbbellAngleDeg: 0,
         },
-        motionGuidePath: 'M 164 202 Q 182 184 198 168',
+        motionGuidePath: 'M 164 205 Q 182 186 198 170',
       };
     },
   },
@@ -614,7 +614,7 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     cues: ['Lift Legs Up', 'Core Brace', 'Lower Under Control', 'Hover Above Mat'],
     computePose(p) {
       const hipX = 164;
-      const hipY = 224;
+      const hipY = 227;
       const angle = lerp(-0.06, -Math.PI * 0.48, p);
       const kneeX = hipX + Math.cos(angle) * 44;
       const kneeY = hipY + Math.sin(angle) * 44;
@@ -625,9 +625,9 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
         floorY: 236,
         head: { x: 68, y: 218 },
         torsoHip: { x: hipX, y: hipY },
-        torsoShoulder: { x: 96, y: 224 },
-        clavicleStart: { x: 96, y: 220 },
-        clavicleEnd: { x: 96, y: 228 },
+        torsoShoulder: { x: 96, y: 227 },
+        clavicleStart: { x: 96, y: 223 },
+        clavicleEnd: { x: 96, y: 231 },
         legLeft: [
           { x: hipX, y: hipY },
           { x: kneeX - 3, y: kneeY },
@@ -648,12 +648,12 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
         ],
         leftArm: null,
         rightArm: {
-          shoulder: { x: 102, y: 224 },
-          elbow: { x: 132, y: 228 },
-          hand: { x: 162, y: 228 },
+          shoulder: { x: 102, y: 227 },
+          elbow: { x: 132, y: 231 },
+          hand: { x: 162, y: 231 },
           dumbbellAngleDeg: 0,
         },
-        motionGuidePath: 'M 248 219 A 84 84 0 0 0 169 140',
+        motionGuidePath: 'M 248 222 A 84 84 0 0 0 169 143',
       };
     },
   },
@@ -665,49 +665,49 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     cues: ['Rotate Right', 'Oblique Squeeze', 'Rotate Left', 'Oblique Squeeze'],
     computePose(p) {
       const shX = lerp(154, 166, p);
-      const hand = quadBezier({ x: 112, y: 196 }, { x: 160, y: 176 }, { x: 208, y: 196 }, p);
+      const hand = quadBezier({ x: 112, y: 208 }, { x: 160, y: 188 }, { x: 208, y: 208 }, p);
       const twistScale = lerp(0.55, 1, 1 - Math.abs(p - 0.5) * 2);
 
       return {
         floorY: 236,
-        head: { x: shX, y: 124 },
-        torsoHip: { x: 160, y: 214 },
-        torsoShoulder: { x: shX, y: 152 },
-        clavicleStart: { x: shX - 18, y: 154 },
-        clavicleEnd: { x: shX + 18, y: 154 },
+        head: { x: shX, y: 137 },
+        torsoHip: { x: 160, y: 227 },
+        torsoShoulder: { x: shX, y: 165 },
+        clavicleStart: { x: shX - 18, y: 167 },
+        clavicleEnd: { x: shX + 18, y: 167 },
         legLeft: [
-          { x: 160, y: 214 },
-          { x: 138, y: 186 },
-          { x: 132, y: 232 },
+          { x: 160, y: 227 },
+          { x: 138, y: 196 },
+          { x: 132, y: 234 },
         ],
         legRight: [
-          { x: 160, y: 214 },
-          { x: 182, y: 186 },
-          { x: 188, y: 232 },
+          { x: 160, y: 227 },
+          { x: 182, y: 196 },
+          { x: 188, y: 234 },
         ],
         footLeft: [
-          { x: 124, y: 232 },
-          { x: 136, y: 232 },
+          { x: 124, y: 234 },
+          { x: 136, y: 234 },
         ],
         footRight: [
-          { x: 184, y: 232 },
-          { x: 196, y: 232 },
+          { x: 184, y: 234 },
+          { x: 196, y: 234 },
         ],
         leftArm: {
-          shoulder: { x: shX - 18, y: 154 },
-          elbow: { x: lerp(124, 158, p), y: 184 },
+          shoulder: { x: shX - 18, y: 167 },
+          elbow: { x: lerp(124, 158, p), y: 196 },
           hand,
           dumbbellAngleDeg: 0,
         },
         rightArm: {
-          shoulder: { x: shX + 18, y: 154 },
-          elbow: { x: lerp(162, 196, p), y: 184 },
+          shoulder: { x: shX + 18, y: 167 },
+          elbow: { x: lerp(162, 196, p), y: 196 },
           hand,
           dumbbellAngleDeg: lerp(-12, 12, p),
           dumbbellScaleX: twistScale,
         },
         hideLeftDumbbell: true,
-        motionGuidePath: 'M 112 196 Q 160 176 208 196',
+        motionGuidePath: 'M 112 208 Q 160 188 208 208',
       };
     },
   },
@@ -1084,38 +1084,38 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
       'Exhale Slowly',
     ],
     computePose(p) {
-      const rElbow = { x: lerp(114, 78, p), y: lerp(180, 212, p) };
-      const rHand = { x: lerp(114, 48, p), y: lerp(146, 220, p) };
-      const rKnee = { x: lerp(192, 224, p), y: lerp(168, 216, p) };
-      const rAnkle = { x: lerp(228, 266, p), y: lerp(168, 224, p) };
+      const rElbow = { x: lerp(114, 78, p), y: lerp(186, 218, p) };
+      const rHand = { x: lerp(114, 48, p), y: lerp(152, 226, p) };
+      const rKnee = { x: lerp(192, 224, p), y: lerp(172, 220, p) };
+      const rAnkle = { x: lerp(228, 266, p), y: lerp(172, 228, p) };
       return {
         floorY: 236,
-        head: { x: 80, y: 214 },
-        torsoHip: { x: 184, y: 222 },
-        torsoShoulder: { x: 114, y: 220 },
-        clavicleStart: { x: 112, y: 218 },
-        clavicleEnd: { x: 118, y: 222 },
+        head: { x: 80, y: 218 },
+        torsoHip: { x: 184, y: 227 },
+        torsoShoulder: { x: 114, y: 227 },
+        clavicleStart: { x: 112, y: 225 },
+        clavicleEnd: { x: 118, y: 229 },
         legLeft: [
-          { x: 184, y: 222 },
-          { x: 186, y: 168 },
-          { x: 222, y: 168 },
+          { x: 184, y: 227 },
+          { x: 186, y: 172 },
+          { x: 222, y: 172 },
         ],
-        legRight: [{ x: 184, y: 222 }, rKnee, rAnkle],
+        legRight: [{ x: 184, y: 227 }, rKnee, rAnkle],
         footLeft: null,
         footRight: [rAnkle, { x: rAnkle.x + 4, y: rAnkle.y - 10 }],
         leftArm: {
-          shoulder: { x: 112, y: 218 },
-          elbow: { x: 110, y: 182 },
-          hand: { x: 110, y: 146 },
+          shoulder: { x: 112, y: 225 },
+          elbow: { x: 110, y: 188 },
+          hand: { x: 110, y: 152 },
           dumbbellAngleDeg: 0,
         },
         rightArm: {
-          shoulder: { x: 118, y: 222 },
+          shoulder: { x: 118, y: 229 },
           elbow: rElbow,
           hand: rHand,
           dumbbellAngleDeg: 0,
         },
-        motionGuidePath: 'M 114 146 Q 74 176 48 220 M 228 168 Q 254 192 266 224',
+        motionGuidePath: 'M 114 152 Q 74 182 48 226 M 228 172 Q 254 196 266 228',
       };
     },
   },
@@ -1129,34 +1129,34 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
       const lift = lerp(0, 26, p);
       return {
         floorY: 236,
-        head: { x: 86, y: 218 - lift * 0.9 },
+        head: { x: 86, y: 220 - lift * 0.9 },
         torsoHip: { x: 180, y: 228 },
-        torsoShoulder: { x: 114, y: 224 - lift * 0.7 },
-        clavicleStart: { x: 112, y: 224 - lift * 0.7 },
-        clavicleEnd: { x: 116, y: 224 - lift * 0.7 },
+        torsoShoulder: { x: 114, y: 228 - lift * 0.7 },
+        clavicleStart: { x: 112, y: 228 - lift * 0.7 },
+        clavicleEnd: { x: 116, y: 228 - lift * 0.7 },
         legLeft: [
           { x: 180, y: 228 },
-          { x: 222, y: 228 - lift * 0.45 },
-          { x: 262, y: 230 - lift * 0.95 },
+          { x: 222, y: 229 - lift * 0.45 },
+          { x: 262, y: 232 - lift * 0.95 },
         ],
         legRight: [
           { x: 180, y: 228 },
-          { x: 224, y: 228 - lift * 0.45 },
-          { x: 266, y: 230 - lift * 0.95 },
+          { x: 224, y: 229 - lift * 0.45 },
+          { x: 266, y: 232 - lift * 0.95 },
         ],
         footLeft: null,
         footRight: [
-          { x: 266, y: 230 - lift * 0.95 },
-          { x: 276, y: 228 - lift * 0.95 },
+          { x: 266, y: 232 - lift * 0.95 },
+          { x: 276, y: 230 - lift * 0.95 },
         ],
         leftArm: null,
         rightArm: {
-          shoulder: { x: 114, y: 224 - lift * 0.7 },
-          elbow: { x: 84, y: 224 - lift * 0.9 },
-          hand: { x: 52, y: 224 - lift * 1.1 },
+          shoulder: { x: 114, y: 228 - lift * 0.7 },
+          elbow: { x: 84, y: 230 - lift * 0.9 },
+          hand: { x: 52, y: 231 - lift * 1.1 },
           dumbbellAngleDeg: 0,
         },
-        motionGuidePath: 'M 52 224 L 52 195 M 266 230 L 266 205',
+        motionGuidePath: 'M 52 231 L 52 202 M 266 232 L 266 207',
       };
     },
   },
@@ -1167,24 +1167,24 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
     view: 'floor',
     cues: ['Open Chest Over Roller', 'Exhale & Relax', 'Curl Gently Up', 'Support Head Lightly'],
     computePose(p) {
-      const shY = lerp(196, 212, p);
+      const shY = lerp(198, 214, p);
       const headX = lerp(94, 78, p);
-      const headY = lerp(176, 206, p);
+      const headY = lerp(178, 208, p);
       return {
         floorY: 236,
         head: { x: headX, y: headY },
-        torsoHip: { x: 182, y: 222 },
+        torsoHip: { x: 182, y: 227 },
         torsoShoulder: { x: 122, y: shY },
         clavicleStart: { x: 120, y: shY },
         clavicleEnd: { x: 124, y: shY },
         legLeft: [
-          { x: 182, y: 222 },
-          { x: 214, y: 184 },
+          { x: 182, y: 227 },
+          { x: 214, y: 186 },
           { x: 244, y: 234 },
         ],
         legRight: [
-          { x: 182, y: 222 },
-          { x: 218, y: 184 },
+          { x: 182, y: 227 },
+          { x: 218, y: 186 },
           { x: 248, y: 234 },
         ],
         footLeft: null,
@@ -1302,24 +1302,30 @@ export function getAnimationDefinition(type: AnimationId): AnimationDefinition {
   return ANIMATION_REGISTRY[type] ?? ANIMATION_REGISTRY['overhead-press'];
 }
 
-export function getCueText(t: number, type: AnimationId): string {
+export function getCueIndex(t: number): 0 | 1 | 2 | 3 {
   const clamped = ((t % 1) + 1) % 1;
+  if (clamped < 0.45) return 0;
+  if (clamped < 0.55) return 1;
+  if (clamped < 0.95) return 2;
+  return 3;
+}
+
+export function getCueText(t: number, type: AnimationId): string {
   const def = getAnimationDefinition(type);
-  if (clamped < 0.45) return def.cues[0];
-  if (clamped < 0.55) return def.cues[1];
-  if (clamped < 0.95) return def.cues[2];
-  return def.cues[3];
+  return def.cues[getCueIndex(t)];
 }
 
 export function computeAnimationFrame(
   type: AnimationId,
   rawT: number,
-): { pose: AthletePose; cue: string; progress: number } {
+): { pose: AthletePose; cue: string; cueIndex: 0 | 1 | 2 | 3; progress: number } {
   const def = getAnimationDefinition(type);
   const progress = getSmoothCycle(rawT);
+  const cueIndex = getCueIndex(rawT);
   return {
     pose: def.computePose(progress),
-    cue: getCueText(rawT, type),
+    cue: def.cues[cueIndex],
+    cueIndex,
     progress,
   };
 }

@@ -21,7 +21,11 @@ describe('ExerciseDemonstrator seam', () => {
     const wrapper = screen.getByTestId('exercise-demonstrator');
     expect(wrapper.getAttribute('data-mode')).toBe('2d');
     expect(screen.getByRole('img', { name: 'Animated exercise form demonstrator' })).toBeTruthy();
-    expect(screen.getByTestId('live-rep-cue').textContent).toBeTruthy();
+    const cueStrip = screen.getByTestId('live-rep-cue');
+    expect(cueStrip.textContent).toContain('Curl & Rotate');
+    expect(cueStrip.textContent).toContain('Palms-Up Squeeze');
+    expect(cueStrip.textContent).toContain('Lower & Reset Grip');
+    expect(cueStrip.textContent).toContain('Neutral Hang');
     expect(screen.queryByTestId('demonstrator-mode-3d')).toBeNull();
   });
 

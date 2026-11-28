@@ -8,16 +8,21 @@
 import {
   AmbientLight,
   BoxGeometry,
+  BufferGeometry,
   CanvasTexture,
   CapsuleGeometry,
   CircleGeometry,
   Color,
   CylinderGeometry,
   DirectionalLight,
+  Float32BufferAttribute,
   Group,
   HemisphereLight,
+  Line,
+  LineDashedMaterial,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PCFSoftShadowMap,
   PerspectiveCamera,
@@ -34,6 +39,7 @@ import type { AnimationId } from '../../domain/schema';
 import {
   CAMERA_PRESETS,
   computeAnimation3DFrame,
+  computeMotionGuidePaths3D,
   RIG_DIMENSIONS,
   type CameraPresetId,
   type RigPose3D,
@@ -55,6 +61,7 @@ export interface Stage3DControllerOptions {
   initialWeightLabel: string | null;
   paused?: boolean;
   onCueChange?: (cue: string) => void;
+  onCueIndexChange?: (cueIndex: 0 | 1 | 2 | 3) => void;
   onOrbitChange?: (orbited: boolean) => void;
   onContextLost?: () => void;
 }
@@ -186,6 +193,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   let paused = options.paused ?? false;
   let phaseTime = 0;
   let lastCue = '';
+  let lastCueIndex = -1;
 
   const width = Math.max(160, container.clientWidth || 320);
   const height = Math.max(160, container.clientHeight || 280);
@@ -616,6 +624,64 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   wallGroup.visible = false;
   scene.add(wallGroup);
 
+  // 5. Subtle 3D dashed motion-guide trajectories + peak target dots (rebuilt only on exercise change)
+  const motionGuideGroup = new Group();
+  scene.add(motionGuideGroup);
+
+  const guideLineMat = trackMat(
+    new LineDashedMaterial({
+      color: new Color(0x10b981),
+      dashSize: 0.045,
+      gapSize: 0.032,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    }),
+  );
+  const guideDotGeo = trackGeo(new SphereGeometry(0.015, 12, 10));
+  const guideDotMat = trackMat(
+    new MeshBasicMaterial({
+      color: new Color(0x34d399),
+      transparent: true,
+      opacity: 0.65,
+      depthWrite: false,
+    }),
+  );
+  let activeGuideGeometries: BufferGeometry[] = [];
+
+  const rebuildMotionGuides = (nextAnim: AnimationId): void => {
+    for (const geo of activeGuideGeometries) {
+      geo.dispose();
+    }
+    activeGuideGeometries = [];
+    motionGuideGroup.clear();
+
+    const paths = computeMotionGuidePaths3D(nextAnim);
+    for (const pts of paths) {
+      const positions = new Float32Array(pts.length * 3);
+      for (let i = 0; i < pts.length; i += 1) {
+        const pt = pts[i]!;
+        positions[i * 3] = pt.x;
+        positions[i * 3 + 1] = pt.y;
+        positions[i * 3 + 2] = pt.z;
+      }
+      const lineGeo = new BufferGeometry();
+      lineGeo.setAttribute('position', new Float32BufferAttribute(positions, 3));
+      activeGuideGeometries.push(lineGeo);
+
+      const line = new Line(lineGeo, guideLineMat);
+      line.computeLineDistances();
+      motionGuideGroup.add(line);
+
+      const peakPt = pts[pts.length - 1]!;
+      const peakDot = new Mesh(guideDotGeo, guideDotMat);
+      peakDot.position.set(peakPt.x, peakPt.y, peakPt.z);
+      motionGuideGroup.add(peakDot);
+    }
+  };
+
+  rebuildMotionGuides(animationType);
+
   // ── Camera & Pointer Orbit State ───────────────────────────────────────────
   let activePreset: CameraPresetId = 'front';
   const currentCamTarget = new Vector3(0, 0.96, 0);
@@ -670,7 +736,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     lastPointerX = event.clientX;
     lastPointerY = event.clientY;
     orbitYaw -= dx * 0.0085;
-    orbitPitch = Math.max(-0.55, Math.min(0.8, orbitPitch + dy * 0.0065));
+    orbitPitch = Math.max(-0.55, Math.min(0.8, orbitPitch - dy * 0.0065));
     if (Math.abs(orbitYaw) > 0.04 || Math.abs(orbitPitch) > 0.04) {
       setOrbitFlag(true);
     }
@@ -777,10 +843,25 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     }
   };
 
-  const applyPose = (pose: RigPose3D, cue: string, progress: number): void => {
+  const applyPose = (
+    pose: RigPose3D,
+    cue: string,
+    cueIndex: 0 | 1 | 2 | 3,
+    progress: number,
+  ): void => {
     if (cue !== lastCue) {
       lastCue = cue;
       options.onCueChange?.(cue);
+    }
+    if (cueIndex !== lastCueIndex) {
+      lastCueIndex = cueIndex;
+      options.onCueIndexChange?.(cueIndex);
+    }
+
+    const matRotY = pose.matAxis === 'z' ? Math.PI / 2 : 0;
+    if (gymMat.rotation.y !== matRotY) {
+      gymMat.rotation.y = matRotY;
+      matTrim.rotation.y = matRotY;
     }
 
     pulseRegionEmissive(progress);
@@ -963,7 +1044,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   // Paint initial frame immediately so first paint has exact pose & camera framing.
   const initialFrame = computeAnimation3DFrame(animationType, 0);
   syncCameraPreset(initialFrame.pose.cameraPreset, true);
-  applyPose(initialFrame.pose, initialFrame.cue, initialFrame.progress);
+  applyPose(initialFrame.pose, initialFrame.cue, initialFrame.cueIndex, initialFrame.progress);
   updateCamera(1);
   renderer.render(scene, camera);
 
@@ -1005,7 +1086,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     const rawT = phaseTime / cycleDuration;
 
     const frame = computeAnimation3DFrame(animationType, rawT);
-    applyPose(frame.pose, frame.cue, frame.progress);
+    applyPose(frame.pose, frame.cue, frame.cueIndex, frame.progress);
     updateCamera(dt);
     renderer.render(scene, camera);
 
@@ -1031,10 +1112,11 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
         orbitYaw = 0;
         orbitPitch = 0;
         setOrbitFlag(false);
+        rebuildMotionGuides(animationType);
       }
       const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
       const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
-      applyPose(frame.pose, frame.cue, frame.progress);
+      applyPose(frame.pose, frame.cue, frame.cueIndex, frame.progress);
       renderer.render(scene, camera);
     },
     setMuscleGroup(nextMuscleGroup) {
@@ -1044,7 +1126,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
       syncRegionBaseColors();
       const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
       const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
-      applyPose(frame.pose, frame.cue, frame.progress);
+      applyPose(frame.pose, frame.cue, frame.cueIndex, frame.progress);
       renderer.render(scene, camera);
     },
     setSpeed(nextSpeed) {
@@ -1066,7 +1148,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
       }
       const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
       const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
-      applyPose(frame.pose, frame.cue, frame.progress);
+      applyPose(frame.pose, frame.cue, frame.cueIndex, frame.progress);
       renderer.render(scene, camera);
     },
     setPaused(nextPaused) {
@@ -1096,6 +1178,8 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
           mat.dispose();
         }
       }
+      for (const geo of activeGuideGeometries) geo.dispose();
+      activeGuideGeometries = [];
       for (const geo of disposableGeometries) geo.dispose();
       for (const mat of disposableMaterials) mat.dispose();
       renderer.dispose();

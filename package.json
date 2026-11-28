@@ -1,8 +1,8 @@
 {
   "name": "home-fitness",
-  "version": "0.2.0",
+  "version": "0.6.1",
   "private": true,
-  "description": "Dumbbell Circuit Studio — Offline-First Home Workout Trainer with 60 FPS SVG Kinematics",
+  "description": "Home Fitness Studio — Offline-First Home Workout Trainer with 3D & 2D Kinematics",
   "type": "module",
   "scripts": {
     "dev": "vite",
