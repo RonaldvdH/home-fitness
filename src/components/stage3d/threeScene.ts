@@ -39,10 +39,18 @@ import {
   type RigPose3D,
   type Vec3,
 } from '../../engine/kinematics3d';
+import {
+  BODY_REGIONS,
+  getRegionColorSpec,
+  resolveMuscleHighlights,
+  type BodyRegion,
+  type MuscleHighlightMap,
+} from '../../engine/muscleHighlights';
 
 export interface Stage3DControllerOptions {
   container: HTMLElement;
   initialAnimation: AnimationId;
+  initialMuscleGroup?: string;
   initialSpeed: number;
   initialWeightLabel: string | null;
   paused?: boolean;
@@ -52,7 +60,8 @@ export interface Stage3DControllerOptions {
 }
 
 export interface Stage3DController {
-  setAnimation: (animationType: AnimationId) => void;
+  setAnimation: (animationType: AnimationId, muscleGroup?: string) => void;
+  setMuscleGroup: (muscleGroup?: string) => void;
   setSpeed: (speedMultiplier: number) => void;
   setWeightLabel: (weightLabel: string | null) => void;
   setPaused: (paused: boolean) => void;
@@ -170,6 +179,8 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   const { container } = options;
 
   let animationType: AnimationId = options.initialAnimation;
+  let muscleGroup = options.initialMuscleGroup;
+  let highlights: MuscleHighlightMap = resolveMuscleHighlights(animationType, muscleGroup);
   let speedMultiplier = options.initialSpeed;
   let weightLabel = options.initialWeightLabel;
   let paused = options.paused ?? false;
@@ -293,39 +304,49 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   matTrim.position.y = -0.013;
   scene.add(matTrim);
 
-  // ── Stylized Articulated 3D Mannequin ──────────────────────────────────────
+  // ── Stylized Articulated 3D Mannequin (single rig, dynamic muscle materials) ─
   const mannequinGroup = new Group();
   scene.add(mannequinGroup);
 
   const unitCylinderGeo = trackGeo(new CylinderGeometry(1, 1, 1, 16, 1));
   const unitJointGeo = trackGeo(new SphereGeometry(1, 18, 14));
 
-  const torsoMat = trackMat(
+  const createRegionMaterial = (region: BodyRegion): MeshStandardMaterial => {
+    const spec = getRegionColorSpec(region, 'neutral');
+    return trackMat(
+      new MeshStandardMaterial({
+        color: new Color(spec.colorInt),
+        emissive: new Color(0x000000),
+        emissiveIntensity: 0,
+        roughness: 0.38,
+        metalness: 0.14,
+      }),
+    );
+  };
+
+  const regionMaterials: Record<BodyRegion, MeshStandardMaterial> = {
+    shoulders: createRegionMaterial('shoulders'),
+    upperArms: createRegionMaterial('upperArms'),
+    forearms: createRegionMaterial('forearms'),
+    chestBack: createRegionMaterial('chestBack'),
+    core: createRegionMaterial('core'),
+    glutes: createRegionMaterial('glutes'),
+    thighs: createRegionMaterial('thighs'),
+    calves: createRegionMaterial('calves'),
+  };
+
+  const headNeutralMat = trackMat(
     new MeshStandardMaterial({
-      color: new Color(0xdbe4ef),
-      roughness: 0.38,
+      color: new Color(0xe2e8f0),
+      roughness: 0.36,
       metalness: 0.14,
     }),
   );
-  const pelvisMat = trackMat(
+  const chestAccentMat = trackMat(
     new MeshStandardMaterial({
       color: new Color(0x334155),
-      roughness: 0.52,
-      metalness: 0.15,
-    }),
-  );
-  const thighMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x64748b),
       roughness: 0.48,
-      metalness: 0.12,
-    }),
-  );
-  const shinMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x94a3b8),
-      roughness: 0.44,
-      metalness: 0.14,
+      metalness: 0.18,
     }),
   );
   const shoeMat = trackMat(
@@ -333,34 +354,6 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
       color: new Color(0xf1f5f9),
       roughness: 0.38,
       metalness: 0.1,
-    }),
-  );
-  const upperArmMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x10b981),
-      roughness: 0.34,
-      metalness: 0.14,
-    }),
-  );
-  const forearmMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x34d399),
-      roughness: 0.32,
-      metalness: 0.14,
-    }),
-  );
-  const jointDarkMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x065f46),
-      roughness: 0.4,
-      metalness: 0.2,
-    }),
-  );
-  const kneeJointMat = trackMat(
-    new MeshStandardMaterial({
-      color: new Color(0x475569),
-      roughness: 0.46,
-      metalness: 0.18,
     }),
   );
   const handMat = trackMat(
@@ -380,10 +373,33 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     }),
   );
 
+  const syncRegionBaseColors = (): void => {
+    for (const region of BODY_REGIONS) {
+      const level = highlights[region];
+      const spec = getRegionColorSpec(region, level);
+      const mat = regionMaterials[region];
+      mat.color.setHex(spec.colorInt);
+      mat.emissive.setHex(spec.emissiveInt);
+      mat.emissiveIntensity = spec.baseEmissive;
+    }
+  };
+
+  const pulseRegionEmissive = (progress: number): void => {
+    for (const region of BODY_REGIONS) {
+      const level = highlights[region];
+      if (level === 'neutral') continue;
+      const spec = getRegionColorSpec(region, level);
+      regionMaterials[region].emissiveIntensity =
+        spec.baseEmissive + (spec.peakEmissive - spec.baseEmissive) * progress;
+    }
+  };
+
+  syncRegionBaseColors();
+
   // Head + visor so facing direction reads crisply.
   const headGroup = new Group();
   const headSphereGeo = trackGeo(new SphereGeometry(0.105, 24, 18));
-  const headMesh = new Mesh(headSphereGeo, torsoMat);
+  const headMesh = new Mesh(headSphereGeo, headNeutralMat);
   headMesh.castShadow = true;
   headGroup.add(headMesh);
 
@@ -394,44 +410,49 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   headGroup.add(visorMesh);
   mannequinGroup.add(headGroup);
 
-  const neckMesh = new Mesh(unitCylinderGeo, torsoMat);
+  const neckMesh = new Mesh(unitCylinderGeo, headNeutralMat);
   neckMesh.castShadow = true;
   mannequinGroup.add(neckMesh);
 
-  // Sculpted athletic rounded ribcage + wrap-around emerald jersey stripe.
+  // Sculpted athletic upper torso (chest & upper back region).
   const chestGroup = new Group();
-  const chestGeo = trackGeo(new CapsuleGeometry(0.112, 0.165, 10, 20));
-  const chestMesh = new Mesh(chestGeo, torsoMat);
-  chestMesh.scale.set(1.42, 1, 0.82);
+  const chestGeo = trackGeo(new CapsuleGeometry(0.106, 0.115, 10, 20));
+  const chestMesh = new Mesh(chestGeo, regionMaterials.chestBack);
+  chestMesh.scale.set(1.48, 1, 0.84);
   chestMesh.castShadow = true;
   chestGroup.add(chestMesh);
 
-  const chestStripeGeo = trackGeo(new CylinderGeometry(0.115, 0.115, 0.048, 24));
-  const chestStripe = new Mesh(chestStripeGeo, upperArmMat);
-  chestStripe.scale.set(1.43, 1, 0.84);
-  chestStripe.position.set(0, 0.045, 0);
+  const chestStripeGeo = trackGeo(new CylinderGeometry(0.108, 0.108, 0.022, 24));
+  const chestStripe = new Mesh(chestStripeGeo, chestAccentMat);
+  chestStripe.scale.set(1.49, 1, 0.85);
+  chestStripe.position.set(0, 0.052, 0);
   chestGroup.add(chestStripe);
   mannequinGroup.add(chestGroup);
 
-  const waistMesh = new Mesh(unitCylinderGeo, pelvisMat);
-  waistMesh.castShadow = true;
-  mannequinGroup.add(waistMesh);
+  // Distinct sculpted midsection/core band (abs, obliques & lower back).
+  const coreGroup = new Group();
+  const coreGeo = trackGeo(new CylinderGeometry(0.104, 0.098, 0.165, 20));
+  const coreMesh = new Mesh(coreGeo, regionMaterials.core);
+  coreMesh.scale.set(1.22, 1, 0.78);
+  coreMesh.castShadow = true;
+  coreGroup.add(coreMesh);
+  mannequinGroup.add(coreGroup);
 
-  // Rounded athletic pelvis/hips capsule.
+  // Rounded athletic pelvis/glutes capsule.
   const pelvisGroup = new Group();
-  const pelvisGeo = trackGeo(new CapsuleGeometry(0.086, 0.1, 8, 18));
-  const pelvisMesh = new Mesh(pelvisGeo, pelvisMat);
+  const pelvisGeo = trackGeo(new CapsuleGeometry(0.088, 0.105, 8, 18));
+  const pelvisMesh = new Mesh(pelvisGeo, regionMaterials.glutes);
   pelvisMesh.rotation.z = Math.PI / 2;
-  pelvisMesh.scale.set(1, 1, 0.92);
+  pelvisMesh.scale.set(1, 1, 0.94);
   pelvisMesh.castShadow = true;
   pelvisGroup.add(pelvisMesh);
   mannequinGroup.add(pelvisGroup);
 
-  const clavicleMesh = new Mesh(unitCylinderGeo, torsoMat);
+  const clavicleMesh = new Mesh(unitCylinderGeo, regionMaterials.shoulders);
   clavicleMesh.castShadow = true;
   mannequinGroup.add(clavicleMesh);
 
-  // Limbs & joints.
+  // Limbs & joints bound directly to their anatomical region materials.
   const makeLimbMesh = (mat: MeshStandardMaterial): Mesh => {
     const m = new Mesh(unitCylinderGeo, mat);
     m.castShadow = true;
@@ -447,29 +468,29 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   };
 
   const limbs = {
-    leftUpperArm: makeLimbMesh(upperArmMat),
-    leftForearm: makeLimbMesh(forearmMat),
-    rightUpperArm: makeLimbMesh(upperArmMat),
-    rightForearm: makeLimbMesh(forearmMat),
-    leftThigh: makeLimbMesh(thighMat),
-    leftShin: makeLimbMesh(shinMat),
+    leftUpperArm: makeLimbMesh(regionMaterials.upperArms),
+    leftForearm: makeLimbMesh(regionMaterials.forearms),
+    rightUpperArm: makeLimbMesh(regionMaterials.upperArms),
+    rightForearm: makeLimbMesh(regionMaterials.forearms),
+    leftThigh: makeLimbMesh(regionMaterials.thighs),
+    leftShin: makeLimbMesh(regionMaterials.calves),
     leftFoot: makeLimbMesh(shoeMat),
-    rightThigh: makeLimbMesh(thighMat),
-    rightShin: makeLimbMesh(shinMat),
+    rightThigh: makeLimbMesh(regionMaterials.thighs),
+    rightShin: makeLimbMesh(regionMaterials.calves),
     rightFoot: makeLimbMesh(shoeMat),
   };
 
   const joints = {
-    leftShoulder: makeJointMesh(upperArmMat, 0.058),
-    rightShoulder: makeJointMesh(upperArmMat, 0.058),
-    leftElbow: makeJointMesh(jointDarkMat, 0.044),
-    rightElbow: makeJointMesh(jointDarkMat, 0.044),
+    leftShoulder: makeJointMesh(regionMaterials.shoulders, 0.062),
+    rightShoulder: makeJointMesh(regionMaterials.shoulders, 0.062),
+    leftElbow: makeJointMesh(regionMaterials.upperArms, 0.044),
+    rightElbow: makeJointMesh(regionMaterials.upperArms, 0.044),
     leftHand: makeJointMesh(handMat, 0.042),
     rightHand: makeJointMesh(handMat, 0.042),
-    leftHip: makeJointMesh(pelvisMat, 0.062),
-    rightHip: makeJointMesh(pelvisMat, 0.062),
-    leftKnee: makeJointMesh(kneeJointMat, 0.052),
-    rightKnee: makeJointMesh(kneeJointMat, 0.052),
+    leftHip: makeJointMesh(regionMaterials.glutes, 0.064),
+    rightHip: makeJointMesh(regionMaterials.glutes, 0.064),
+    leftKnee: makeJointMesh(regionMaterials.thighs, 0.052),
+    rightKnee: makeJointMesh(regionMaterials.thighs, 0.052),
     leftAnkle: makeJointMesh(shoeMat, 0.04),
     rightAnkle: makeJointMesh(shoeMat, 0.04),
   };
@@ -756,11 +777,13 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     }
   };
 
-  const applyPose = (pose: RigPose3D, cue: string): void => {
+  const applyPose = (pose: RigPose3D, cue: string, progress: number): void => {
     if (cue !== lastCue) {
       lastCue = cue;
       options.onCueChange?.(cue);
     }
+
+    pulseRegionEmissive(progress);
 
     if (pose.cameraPreset !== activePreset) {
       syncCameraPreset(pose.cameraPreset, false);
@@ -802,8 +825,12 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     tmpFwd.crossVectors(tmpRight, tmpUp).normalize();
     tmpRight.crossVectors(tmpUp, tmpFwd).normalize();
     tmpMat.makeBasis(tmpRight, tmpUp, tmpFwd);
-    chestGroup.position.lerpVectors(vPelvis, vChest, 0.62);
+    chestGroup.position.lerpVectors(vPelvis, vChest, 0.72);
     chestGroup.quaternion.setFromRotationMatrix(tmpMat);
+
+    // Midsection core band positioned between pelvis and ribcage.
+    coreGroup.position.lerpVectors(vPelvis, vChest, 0.34);
+    coreGroup.quaternion.setFromRotationMatrix(tmpMat);
 
     // Pelvis group oriented along hip-to-hip width & spine up.
     tmpRight.subVectors(vLHip, vRHip).normalize();
@@ -814,7 +841,6 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     pelvisGroup.quaternion.setFromRotationMatrix(tmpMat);
 
     alignSegment(neckMesh, vChest, vHead, 0.044, tmpDir, tmpMid, tmpQuat);
-    alignSegment(waistMesh, vPelvis, vChest, 0.088, tmpDir, tmpMid, tmpQuat);
     alignSegment(clavicleMesh, vRSh, vLSh, 0.052, tmpDir, tmpMid, tmpQuat);
 
     // Limbs
@@ -937,7 +963,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   // Paint initial frame immediately so first paint has exact pose & camera framing.
   const initialFrame = computeAnimation3DFrame(animationType, 0);
   syncCameraPreset(initialFrame.pose.cameraPreset, true);
-  applyPose(initialFrame.pose, initialFrame.cue);
+  applyPose(initialFrame.pose, initialFrame.cue, initialFrame.progress);
   updateCamera(1);
   renderer.render(scene, camera);
 
@@ -979,7 +1005,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
     const rawT = phaseTime / cycleDuration;
 
     const frame = computeAnimation3DFrame(animationType, rawT);
-    applyPose(frame.pose, frame.cue);
+    applyPose(frame.pose, frame.cue, frame.progress);
     updateCamera(dt);
     renderer.render(scene, camera);
 
@@ -989,16 +1015,36 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   rafId = requestAnimationFrame(tick);
 
   return {
-    setAnimation(nextAnim) {
-      if (nextAnim === animationType) return;
+    setAnimation(nextAnim, nextMuscleGroup) {
+      const animChanged = nextAnim !== animationType;
+      const muscleChanged = nextMuscleGroup !== undefined && nextMuscleGroup !== muscleGroup;
+      if (!animChanged && !muscleChanged) return;
       animationType = nextAnim;
-      phaseTime = 0;
-      // Reset manual orbit when switching exercises so the new optimal camera angle shines.
-      orbitYaw = 0;
-      orbitPitch = 0;
-      setOrbitFlag(false);
-      const frame = computeAnimation3DFrame(animationType, 0);
-      applyPose(frame.pose, frame.cue);
+      if (nextMuscleGroup !== undefined) {
+        muscleGroup = nextMuscleGroup;
+      }
+      highlights = resolveMuscleHighlights(animationType, muscleGroup);
+      syncRegionBaseColors();
+      if (animChanged) {
+        phaseTime = 0;
+        // Reset manual orbit when switching exercises so the new optimal camera angle shines.
+        orbitYaw = 0;
+        orbitPitch = 0;
+        setOrbitFlag(false);
+      }
+      const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
+      const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
+      applyPose(frame.pose, frame.cue, frame.progress);
+      renderer.render(scene, camera);
+    },
+    setMuscleGroup(nextMuscleGroup) {
+      if (nextMuscleGroup === muscleGroup) return;
+      muscleGroup = nextMuscleGroup;
+      highlights = resolveMuscleHighlights(animationType, muscleGroup);
+      syncRegionBaseColors();
+      const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
+      const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
+      applyPose(frame.pose, frame.cue, frame.progress);
       renderer.render(scene, camera);
     },
     setSpeed(nextSpeed) {
@@ -1020,7 +1066,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
       }
       const cycleDuration = 3.2 / Math.max(0.5, speedMultiplier);
       const frame = computeAnimation3DFrame(animationType, phaseTime / cycleDuration);
-      applyPose(frame.pose, frame.cue);
+      applyPose(frame.pose, frame.cue, frame.progress);
       renderer.render(scene, camera);
     },
     setPaused(nextPaused) {

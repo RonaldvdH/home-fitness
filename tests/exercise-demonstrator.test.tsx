@@ -58,4 +58,41 @@ describe('ExerciseDemonstrator seam', () => {
     expect(wrapper.getAttribute('data-mode')).toBe('2d');
     expect(screen.getByRole('img', { name: 'Animated exercise form demonstrator' })).toBeTruthy();
   });
+
+  it('dynamically colors targeted muscle regions in-place on 2D SVG as exercises change', () => {
+    resetWebGLSupportCache();
+    const { container, rerender } = render(
+      <ExerciseDemonstrator
+        animationType="squat"
+        muscleGroup="Quadriceps • Glutes • Core"
+        speedMultiplier={1}
+        weightLabel="5kg"
+      />,
+    );
+
+    const thighEl = container.querySelector('[data-muscle-region="thighs"]');
+    const gluteEl = container.querySelector('[data-muscle-region="glutes"]');
+    const upperArmEl = container.querySelector('[data-muscle-region="upperArms"]');
+
+    expect(thighEl?.getAttribute('data-highlight')).toBe('primary');
+    expect(thighEl?.getAttribute('stroke')).toBe('#10b981');
+    expect(gluteEl?.getAttribute('data-highlight')).toBe('secondary');
+    expect(gluteEl?.getAttribute('fill')).toBe('#f59e0b');
+    expect(upperArmEl?.getAttribute('data-highlight')).toBe('neutral');
+
+    // Switch exercise -> same single SVG model updates region colors in-place
+    rerender(
+      <ExerciseDemonstrator
+        animationType="bicep-curl"
+        muscleGroup="Biceps • Forearms"
+        speedMultiplier={1}
+        weightLabel="5kg"
+      />,
+    );
+
+    expect(upperArmEl?.getAttribute('data-highlight')).toBe('primary');
+    expect(upperArmEl?.getAttribute('stroke')).toBe('#10b981');
+    expect(thighEl?.getAttribute('data-highlight')).toBe('neutral');
+    expect(screen.getByTestId('muscle-highlight-legend')).toBeTruthy();
+  });
 });

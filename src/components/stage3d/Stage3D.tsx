@@ -4,6 +4,7 @@ import { createStage3DController, type Stage3DController } from './threeScene';
 
 export interface Stage3DProps {
   animationType: AnimationId;
+  muscleGroup?: string;
   speedMultiplier: number;
   weightLabel: string | null;
   variant?: 'default' | 'flex';
@@ -13,6 +14,7 @@ export interface Stage3DProps {
 
 export function Stage3D({
   animationType,
+  muscleGroup,
   speedMultiplier,
   weightLabel,
   variant = 'default',
@@ -27,7 +29,13 @@ export function Stage3D({
 
   const [isOrbited, setIsOrbited] = useState(false);
 
-  const initialPropsRef = useRef({ animationType, speedMultiplier, weightLabel, paused });
+  const initialPropsRef = useRef({
+    animationType,
+    muscleGroup,
+    speedMultiplier,
+    weightLabel,
+    paused,
+  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -38,6 +46,7 @@ export function Stage3D({
       controller = createStage3DController({
         container: host,
         initialAnimation: initialPropsRef.current.animationType,
+        initialMuscleGroup: initialPropsRef.current.muscleGroup,
         initialSpeed: initialPropsRef.current.speedMultiplier,
         initialWeightLabel: initialPropsRef.current.weightLabel,
         paused: initialPropsRef.current.paused,
@@ -66,8 +75,8 @@ export function Stage3D({
   }, []);
 
   useEffect(() => {
-    controllerRef.current?.setAnimation(animationType);
-  }, [animationType]);
+    controllerRef.current?.setAnimation(animationType, muscleGroup);
+  }, [animationType, muscleGroup]);
 
   useEffect(() => {
     controllerRef.current?.setSpeed(speedMultiplier);
@@ -118,9 +127,24 @@ export function Stage3D({
         </button>
       ) : (
         !isFlex && (
-          <span class="pointer-events-none absolute bottom-2.5 right-3 sm:bottom-3 sm:right-4 z-10 text-[10px] font-medium text-slate-500">
-            Drag to orbit
-          </span>
+          <>
+            <div
+              data-testid="muscle-highlight-legend"
+              class="pointer-events-none absolute bottom-2.5 left-3 sm:bottom-3 sm:left-4 z-10 flex items-center gap-2.5 text-[10px] font-medium text-slate-400"
+            >
+              <span class="inline-flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                Primary
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-400" aria-hidden="true" />
+                Secondary
+              </span>
+            </div>
+            <span class="pointer-events-none absolute bottom-2.5 right-3 sm:bottom-3 sm:right-4 z-10 text-[10px] font-medium text-slate-500">
+              Drag to orbit
+            </span>
+          </>
         )
       )}
     </>

@@ -97,6 +97,7 @@ Keep modules strictly organized by responsibility:
 │   ├── engine/
 │   │   ├── animations.ts       # Pure typed 60 FPS SVG pose registry & easing math
 │   │   ├── kinematics3d.ts     # Pure 3D kinematics & analytical 2-bone IK pose registry (zero DOM/WebGL)
+│   │   ├── muscleHighlights.ts # Pure anatomical muscle-region highlight resolver & 2D/3D color tokens
 │   │   └── timer.ts            # Drift-free wall-clock timer state machine (injectable clock)
 │   ├── services/
 │   │   ├── storage.ts          # StorageAdapter seam + LocalStorageAdapter + JSON backup helpers
@@ -134,9 +135,10 @@ Keep modules strictly organized by responsibility:
 └── tests/
     ├── architecture.test.ts    # Pure domain/engine, StorageAdapter, ModalDialog & EXCEPTIONS sync
     ├── catalog.contract.test.ts # Exercise catalog completeness, tag validity & Space matrix checks
-    ├── exercise-demonstrator.test.tsx # WebGL fallback, compact 2D & 3D/2D toggle tests
+    ├── exercise-demonstrator.test.tsx # WebGL fallback, compact 2D, muscle coloring & 3D/2D toggle tests
     ├── foldable.test.ts        # Viewport Segments auto-detection & manual Floor Mode state machine
     ├── kinematics3d.test.ts    # Pure 3D IK, floor clearance, supination & prop invariants (all 28 moves)
+    ├── muscle-highlights.test.ts # Dynamic muscle-region mapping & color specs across all 28 moves
     ├── modal-dialog.test.tsx   # Base UI Dialog rendering, close button & Escape dismissal
     ├── schema.test.ts          # Schema v4 validation, v2/v3 -> v4 migration, Space & tag inference
     ├── presets.test.ts         # Space equipment filtering, weight substitution, shuffle & durations

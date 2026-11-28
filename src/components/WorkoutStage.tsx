@@ -180,6 +180,7 @@ export function WorkoutStage({
           >
             <ExerciseDemonstrator
               animationType={activeExercise.animationType}
+              muscleGroup={activeExercise.muscleGroup}
               speedMultiplier={demoSpeed}
               weightLabel={weightLabel}
               paused={stagePaused}

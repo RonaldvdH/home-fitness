@@ -9,6 +9,7 @@ export type DemonstratorMode = '3d' | '2d';
 
 export interface ExerciseDemonstratorProps {
   animationType: AnimationId;
+  muscleGroup?: string;
   speedMultiplier: number;
   weightLabel: string | null;
   variant?: 'default' | 'flex' | 'compact';
@@ -59,6 +60,7 @@ export function resetWebGLSupportCache(): void {
  */
 export function ExerciseDemonstrator({
   animationType,
+  muscleGroup,
   speedMultiplier,
   weightLabel,
   variant = 'default',
@@ -79,6 +81,7 @@ export function ExerciseDemonstrator({
     return (
       <AthleteSvg
         animationType={animationType}
+        muscleGroup={muscleGroup}
         speedMultiplier={speedMultiplier}
         weightLabel={weightLabel}
         variant="flex"
@@ -93,6 +96,7 @@ export function ExerciseDemonstrator({
   const svgFallback = (
     <AthleteSvg
       animationType={animationType}
+      muscleGroup={muscleGroup}
       speedMultiplier={speedMultiplier}
       weightLabel={weightLabel}
       variant={isFlex ? 'flex' : 'default'}
@@ -153,6 +157,7 @@ export function ExerciseDemonstrator({
         <Suspense fallback={svgFallback}>
           <LazyStage3D
             animationType={animationType}
+            muscleGroup={muscleGroup}
             speedMultiplier={speedMultiplier}
             weightLabel={weightLabel}
             variant={isFlex ? 'flex' : 'default'}
