@@ -48,6 +48,8 @@ describe('store decomposition, injectable clock/IDs & selector render isolation'
       audio: {
         isEnabled: () => false,
         setEnabled: () => {},
+        setTheme: () => {},
+        getTheme: () => 'classic',
         unlock: () => {},
         beepCountdown: () => {},
         beepWorkStart: () => {},

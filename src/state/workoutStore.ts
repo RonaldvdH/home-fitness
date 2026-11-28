@@ -66,7 +66,12 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
   let activeRoutine = getActiveRoutine(data);
   let activeSpace = getActiveSpace(data);
 
-  const audio = deps.audio ?? createAudioCoach(activeRoutine.settings.soundEnabled);
+  const audio =
+    deps.audio ??
+    createAudioCoach(
+      activeRoutine.settings.soundEnabled,
+      activeRoutine.settings.audioTheme ?? 'classic',
+    );
   const voice = deps.voice ?? createVoiceCoach(activeRoutine.settings.voiceEnabled);
   const wakeLock = deps.wakeLock ?? createWakeLockController();
 
@@ -184,6 +189,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
     };
     activeRoutine = updated;
     audio.setEnabled(activeRoutine.settings.soundEnabled);
+    audio.setTheme(activeRoutine.settings.audioTheme ?? 'classic');
     voice.setEnabled(activeRoutine.settings.voiceEnabled);
 
     if (options?.resetTimeline !== false) {
@@ -465,6 +471,7 @@ export function createWorkoutStore(deps: WorkoutStoreDependencies = {}): Workout
       activeRoutine = getActiveRoutine(data);
       activeSpace = getActiveSpace(data);
       audio.setEnabled(activeRoutine.settings.soundEnabled);
+      audio.setTheme(activeRoutine.settings.audioTheme ?? 'classic');
       voice.setEnabled(activeRoutine.settings.voiceEnabled);
       resetTimelineState();
       persistData();

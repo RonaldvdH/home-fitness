@@ -125,6 +125,8 @@ export interface Exercise {
   workSecOverride?: number;
 }
 
+export type AudioTheme = 'classic' | 'chime';
+
 export interface WorkoutSettings {
   workSec: number;
   restSec: number;
@@ -133,6 +135,7 @@ export interface WorkoutSettings {
   includeCooldown: boolean;
   soundEnabled: boolean;
   voiceEnabled: boolean;
+  audioTheme?: AudioTheme;
   demoSpeed: number;
 }
 
@@ -185,6 +188,7 @@ export const DEFAULT_SETTINGS: WorkoutSettings = {
   includeCooldown: true,
   soundEnabled: true,
   voiceEnabled: true,
+  audioTheme: 'classic',
   demoSpeed: 1,
 };
 
