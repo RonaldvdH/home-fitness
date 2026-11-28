@@ -471,3 +471,38 @@ test('Offline PWA resilience (360x800): reloads and runs workouts with zero erro
     await context.setOffline(false);
   }
 });
+
+test('Pilates & Mobility style (360x800): selecting Pilates persists across reload and runs with breath cues', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'New Workout' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+
+  await page.getByTestId('workout-style-pilates').click();
+  await expect(page.getByTestId('workout-style-pilates')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('new-workout-preview')).toContainText('Pilates');
+
+  // Pick Abs & Core so every exercise has Pilates breath cues (The Hundred, Single-Leg Stretch, etc.)
+  await page.getByRole('button', { name: /Abs & Core/i }).click();
+  await page.getByRole('button', { name: 'Load & Preview' }).click();
+  await expect(page.getByTestId('active-routine-name')).toContainText('Pilates');
+
+  // Advance to first WORK step and verify zero overflow
+  await page.getByLabel('Next step').click();
+  await expect(page.getByTestId('phase-badge')).toHaveText('WORK');
+  await expectZeroHorizontalOverflow(page, '360x800 Pilates WORK step');
+
+  // Reload and confirm Pilates remains the remembered device style
+  await page.reload();
+  await page.getByRole('button', { name: 'New Workout' }).click();
+  await expect(page.getByTestId('workout-style-pilates')).toHaveAttribute('aria-pressed', 'true');
+  await dismissDialogWithEscape(page);
+
+  expect(errors).toEqual([]);
+});

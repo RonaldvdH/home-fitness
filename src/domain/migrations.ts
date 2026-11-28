@@ -12,6 +12,7 @@ import {
   normalizeWorkoutSpace,
 } from './normalizers';
 import {
+  isWorkoutStyle,
   MAX_HISTORY_RECORDS,
   SCHEMA_VERSION,
   type AppDataV4,
@@ -94,6 +95,9 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV4): ParseImport
       typeof raw.activeSpaceId === 'string' && spaces.some((s) => s.id === raw.activeSpaceId)
         ? raw.activeSpaceId
         : (spaces[0]?.id ?? fallbackSpaceId);
+    const preferredStyle = isWorkoutStyle(raw.preferredStyle)
+      ? raw.preferredStyle
+      : (fallbackData.preferredStyle ?? 'strength');
 
     const isV3 = raw.schemaVersion === 3;
 
@@ -106,6 +110,7 @@ export function parseAppData(raw: unknown, fallbackData: AppDataV4): ParseImport
         routines,
         spaces,
         activeSpaceId,
+        preferredStyle,
         history,
       },
     };

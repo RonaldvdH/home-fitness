@@ -42,6 +42,8 @@ export interface AnimationDefinition {
   label: string;
   view: 'front' | 'side' | 'floor';
   cues: readonly [lift: string, peak: string, lower: string, reset: string];
+  /** Optional 4-phase breath pacing cues for Pilates & Mobility exercises. */
+  breathCues?: readonly [string, string, string, string];
   computePose: (progress: number) => AthletePose;
 }
 

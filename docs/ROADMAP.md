@@ -16,8 +16,8 @@ This document is the authoritative, repo-resident development roadmap for **Home
 | **Phase 3**   | Workout Spaces & Expanded Equipment   | Schema v4 (`spaces[]`, `requiredEquipment[]`, `styles[]`), named Spaces in New Workout overlay, expanded catalog for elastic bands, wall, floor/mat, foam roller, bodyweight    | **Completed** |
 | **Phase 4**   | Real-Time 3D Exercise Demonstrator    | Lazy-loaded Three.js WebGL stylized 3D mannequin with mat/wall/props, true 3D joint biomechanics, auto camera angles + touch-to-orbit, graceful 2D SVG fallback                 | **Completed** |
 | **Phase 4.5** | Production Hardening & Modularization | Error boundaries, offline assets/E2E, modular domain/engine/stage3d/state/UI splits (<=500 lines/file), `useStoreSelector` render isolation, `ActiveModal` union (`ADR-0007`)   | **Completed** |
-| **Phase 5**   | Pilates & Mobility / Recovery Track   | Workout Style selector (`Strength`, `Pilates`, `Mobility`) in New Workout overlay, partner-friendly Pilates/mat/roller/band catalog, slower breath-paced tempo cues             | **Next**      |
-| **Phase 6**   | Progression & Delight Polish          | Streaks/weekly history heatmap from ISO `history[]`, gentle weight-progression nudges per Space, refined breath/transition audio chimes, optional sync via `StorageAdapter`     | Planned       |
+| **Phase 5**   | Pilates & Mobility / Recovery Track   | Workout Style selector (`Strength`, `Pilates`, `Mobility`) in New Workout overlay, partner-friendly Pilates/mat/roller/band catalog, slower breath-paced tempo cues             | **Completed** |
+| **Phase 6**   | Progression & Delight Polish          | Streaks/weekly history heatmap from ISO `history[]`, gentle weight-progression nudges per Space, refined breath/transition audio chimes, optional sync via `StorageAdapter`     | **Next**      |
 
 ---
 

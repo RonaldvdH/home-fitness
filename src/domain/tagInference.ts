@@ -36,6 +36,16 @@ const FLOOR_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
   'roller-thoracic',
   'roller-quad',
   'roller-glute',
+  'pilates-hundred',
+  'single-leg-stretch',
+  'swan-prep',
+  'side-leg-lift',
+  'spine-twist',
+  'clam-shell',
+  'swimming',
+  'cat-cow',
+  'worlds-greatest-stretch',
+  'childs-pose',
 ]);
 
 const WALL_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
@@ -55,6 +65,7 @@ const BAND_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
   'band-row',
   'band-bicep-curl',
   'band-kickback',
+  'clam-shell',
 ]);
 
 export function inferRequiredEquipment(
@@ -120,6 +131,10 @@ export function inferWorkoutStyles(
     equipment.kind === 'foam-roller' ||
     ROLLER_ANIMATIONS.has(animationType) ||
     animationType === 'wall-angels' ||
+    animationType === 'cat-cow' ||
+    animationType === 'worlds-greatest-stretch' ||
+    animationType === 'childs-pose' ||
+    animationType === 'spine-twist' ||
     /mobility|stretch|release|recovery/.test(lower)
   ) {
     styles.add('mobility');
@@ -134,12 +149,25 @@ export function inferWorkoutStyles(
     animationType === 'crunch' ||
     animationType === 'wall-angels' ||
     animationType === 'band-kickback' ||
+    animationType === 'pilates-hundred' ||
+    animationType === 'single-leg-stretch' ||
+    animationType === 'swan-prep' ||
+    animationType === 'side-leg-lift' ||
+    animationType === 'spine-twist' ||
+    animationType === 'clam-shell' ||
+    animationType === 'swimming' ||
     /pilates/.test(lower)
   ) {
     styles.add('pilates');
   }
 
-  if (styles.size === 0 || !ROLLER_ANIMATIONS.has(animationType)) {
+  if (
+    styles.size === 0 ||
+    (!ROLLER_ANIMATIONS.has(animationType) &&
+      animationType !== 'cat-cow' &&
+      animationType !== 'worlds-greatest-stretch' &&
+      animationType !== 'childs-pose')
+  ) {
     if (!/stretch|recovery/.test(lower)) {
       styles.add('strength');
     }
@@ -182,7 +210,10 @@ export function inferMuscleGroupTags(
     animationType === 'wall-sit' ||
     animationType === 'roller-quad' ||
     animationType === 'roller-glute' ||
-    /quad|glute|hamstring|leg|calf|lower|it-band/.test(lower)
+    animationType === 'side-leg-lift' ||
+    animationType === 'clam-shell' ||
+    animationType === 'worlds-greatest-stretch' ||
+    /quad|glute|hamstring|leg|calf|lower|it-band|hip/.test(lower)
   ) {
     inferred.add('lower');
   }
@@ -194,6 +225,11 @@ export function inferMuscleGroupTags(
     animationType === 'bird-dog' ||
     animationType === 'dead-bug' ||
     animationType === 'superman' ||
+    animationType === 'pilates-hundred' ||
+    animationType === 'single-leg-stretch' ||
+    animationType === 'spine-twist' ||
+    animationType === 'swimming' ||
+    animationType === 'cat-cow' ||
     /abs|core|oblique/.test(lower)
   ) {
     inferred.add('abs');
@@ -213,7 +249,9 @@ export function inferMuscleGroupTags(
     animationType === 'wall-angels' ||
     animationType === 'push-up' ||
     animationType === 'roller-thoracic' ||
-    /shoulder|delt|chest|pec|back|lat|bicep|tricep|arm|upper|thoracic/.test(lower)
+    animationType === 'swan-prep' ||
+    animationType === 'childs-pose' ||
+    /shoulder|delt|chest|pec|back|lat|bicep|tricep|arm|upper|thoracic|spine/.test(lower)
   ) {
     inferred.add('upper');
   }

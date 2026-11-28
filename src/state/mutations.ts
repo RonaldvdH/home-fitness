@@ -230,3 +230,17 @@ export function createSessionRecord(
     source,
   };
 }
+
+export function applyPresetMetadataToData(
+  data: AppDataV4,
+  spaceId: string | undefined,
+  style: WorkoutStyle,
+): AppDataV4 {
+  const nextSpaceId =
+    spaceId && data.spaces.some((s) => s.id === spaceId) ? spaceId : data.activeSpaceId;
+  return {
+    ...data,
+    activeSpaceId: nextSpaceId,
+    preferredStyle: style,
+  };
+}

@@ -7,6 +7,7 @@ import { ANIMATION_IDS, type AnimationId } from '../../domain/schema';
 import { ANIMATION_REGISTRY, getCueIndex, getSmoothCycle } from '../animations';
 import { buildMotionGuidePaths3D } from './motionGuides';
 import { FLOOR_CORE_3D_ANIMATIONS } from './posesFloorCore';
+import { PILATES_MOBILITY_3D_ANIMATIONS } from './posesPilatesMobility';
 import { PROPS_3D_ANIMATIONS } from './posesProps';
 import { UPPER_LOWER_3D_ANIMATIONS } from './posesUpperLower';
 import type { Animation3DDefinition, Animation3DFrame, Vec3 } from './types';
@@ -44,6 +45,7 @@ export const ANIMATION_3D_REGISTRY: Record<AnimationId, Animation3DDefinition> =
   ...UPPER_LOWER_3D_ANIMATIONS,
   ...FLOOR_CORE_3D_ANIMATIONS,
   ...PROPS_3D_ANIMATIONS,
+  ...PILATES_MOBILITY_3D_ANIMATIONS,
 } as Record<AnimationId, Animation3DDefinition>;
 
 /**

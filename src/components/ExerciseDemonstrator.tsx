@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'preact/compat';
 import { useCallback, useRef, useState } from 'preact/hooks';
 import type { AnimationId } from '../domain/schema';
-import { getAnimationDefinition } from '../engine/animations';
+import { getAnimationDefinition, getBreathCues } from '../engine/animations';
 import { AthleteSvg } from './AthleteSvg';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SegmentedControl } from './ui/segmented-control';
@@ -76,6 +76,10 @@ export function ExerciseDemonstrator({
   );
   const [userMode, setUserMode] = useState<DemonstratorMode>(preferredMode ?? '3d');
   const cueItemRefs = useRef<Array<HTMLLIElement | null>>([]);
+  const breathBadgeRef = useRef<HTMLSpanElement | null>(null);
+  const breathCues = getBreathCues(animationType);
+  const breathCuesRef = useRef(breathCues);
+  breathCuesRef.current = breathCues;
 
   const handleFallback = useCallback(() => {
     setWebglAvailable(false);
@@ -88,6 +92,14 @@ export function ExerciseDemonstrator({
       const next = i === activeIdx ? 'true' : 'false';
       if (el.dataset.active !== next) {
         el.dataset.active = next;
+      }
+    }
+    const breathEl = breathBadgeRef.current;
+    const cues = breathCuesRef.current;
+    if (breathEl && cues) {
+      const nextText = cues[activeIdx];
+      if (breathEl.textContent !== nextText) {
+        breathEl.textContent = nextText;
       }
     }
   }, []);
@@ -174,6 +186,16 @@ export function ExerciseDemonstrator({
                 : 'absolute top-2.5 left-3 sm:top-3.5 sm:left-4 z-20'
             }
           />
+        )}
+
+        {breathCues && (
+          <div
+            data-testid="live-breath-cue"
+            class="absolute bottom-2.5 right-3 z-20 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-500/15 border border-sky-400/35 backdrop-blur-sm text-[11px] font-semibold text-sky-200 pointer-events-none"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-300 animate-pulse" aria-hidden="true" />
+            <span ref={breathBadgeRef}>{breathCues[0]}</span>
+          </div>
         )}
 
         {stageCanvas}

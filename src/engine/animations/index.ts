@@ -6,6 +6,7 @@
 import { ANIMATION_IDS, type AnimationId } from '../../domain/schema';
 import { getCueIndex, getSmoothCycle, type AnimationDefinition, type AthletePose } from './math';
 import { CORE_BAND_ANIMATIONS } from './posesCoreBands';
+import { PILATES_MOBILITY_ANIMATIONS } from './posesPilatesMobility';
 import { UPPER_LOWER_ANIMATIONS } from './posesUpperLower';
 import { WALL_FLOOR_ROLLER_ANIMATIONS } from './posesWallFloorRoller';
 
@@ -25,6 +26,7 @@ export const ANIMATION_REGISTRY: Record<AnimationId, AnimationDefinition> = {
   ...UPPER_LOWER_ANIMATIONS,
   ...CORE_BAND_ANIMATIONS,
   ...WALL_FLOOR_ROLLER_ANIMATIONS,
+  ...PILATES_MOBILITY_ANIMATIONS,
 } as Record<AnimationId, AnimationDefinition>;
 
 export const ANIMATION_OPTIONS: readonly { value: AnimationId; label: string }[] =
@@ -35,6 +37,10 @@ export const ANIMATION_OPTIONS: readonly { value: AnimationId; label: string }[]
 
 export function getAnimationDefinition(type: AnimationId): AnimationDefinition {
   return ANIMATION_REGISTRY[type] ?? ANIMATION_REGISTRY['overhead-press'];
+}
+
+export function getBreathCues(type: AnimationId): readonly [string, string, string, string] | null {
+  return getAnimationDefinition(type).breathCues ?? null;
 }
 
 export function getCueText(t: number, type: AnimationId): string {

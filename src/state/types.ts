@@ -10,6 +10,7 @@ import type {
   TimelineStep,
   WorkoutSettings,
   WorkoutSpace,
+  WorkoutStyle,
 } from '../domain/schema';
 import type { TimerClock, TimerSnapshot } from '../engine/timer';
 import type { AudioCoach } from '../services/audio';
@@ -23,6 +24,7 @@ export interface WorkoutStoreState {
   data: AppDataV4;
   activeRoutine: Routine;
   activeSpace: WorkoutSpace;
+  preferredStyle: WorkoutStyle;
   timeline: TimelineStep[];
   totalDurationSec: number;
   timer: TimerSnapshot;
@@ -64,6 +66,7 @@ export interface WorkoutStore {
   restoreDefaultExercises: () => void;
   applyWorkoutPreset: (preset: GeneratedWorkoutPreset, options?: { autoStart?: boolean }) => void;
   selectSpace: (spaceId: string) => void;
+  setPreferredStyle: (style: WorkoutStyle) => void;
   saveSpace: (input: SpaceFormInput) => WorkoutSpace | null;
   deleteSpace: (spaceId: string) => void;
   updateSettings: (next: Partial<WorkoutSettings>) => void;

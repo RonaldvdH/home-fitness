@@ -237,4 +237,43 @@ describe('tag-driven & space-aware workout preset generator', () => {
     });
     expect(noMatch20.exercises.some((e) => e.id === 'ex-user-hollow-hold')).toBe(false);
   });
+
+  it('builds valid Pilates and Mobility circuits across all default Spaces with slower breath cadence', () => {
+    const styles = ['strength', 'pilates', 'mobility'] as const;
+    for (const style of styles) {
+      for (const space of DEFAULT_SPACES) {
+        for (const durationMin of WORKOUT_DURATIONS) {
+          const preset = generateWorkoutPreset({
+            durationMin,
+            target: 'full',
+            style,
+            currentSettings: DEFAULT_SETTINGS,
+            space,
+            random: createSeededRandom(31),
+          });
+
+          expect(preset.style).toBe(style);
+          expect(
+            preset.exercises.length,
+            `${style} / ${space.name} / ${durationMin}m should have matches`,
+          ).toBeGreaterThan(0);
+
+          for (const ex of preset.exercises) {
+            expect(ex.styles).toContain(style);
+            for (const req of ex.requiredEquipment) {
+              expect(space.availableEquipment).toContain(req);
+            }
+          }
+
+          if (style === 'pilates') {
+            expect(preset.settings.demoSpeed).toBe(0.7);
+            expect(preset.routineName).toContain('Pilates');
+          } else if (style === 'mobility') {
+            expect(preset.settings.demoSpeed).toBe(0.65);
+            expect(preset.routineName).toContain('Mobility');
+          }
+        }
+      }
+    }
+  });
 });

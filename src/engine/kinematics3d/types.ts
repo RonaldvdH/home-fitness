@@ -51,7 +51,7 @@ export const CAMERA_PRESETS: Record<CameraPresetId, CameraPresetConfig> = {
 export type PropSpec3D =
   | { kind: 'none' }
   | { kind: 'dumbbells'; count: 1 | 2 }
-  | { kind: 'band'; mode: 'hands' | 'feet-to-hands' | 'ankles' }
+  | { kind: 'band'; mode: 'hands' | 'feet-to-hands' | 'ankles' | 'knees' }
   | { kind: 'foam-roller'; position: Vec3; axis: 'x' | 'z'; rollAngle: number }
   | { kind: 'wall'; center: Vec3; normal: Vec3 };
 

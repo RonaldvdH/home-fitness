@@ -48,6 +48,7 @@ export function AppModals({
     (s) => ({
       activeRoutine: s.activeRoutine,
       activeSpace: s.activeSpace,
+      preferredStyle: s.preferredStyle,
       spaces: s.data.spaces,
       history: s.data.history,
       voiceSupported: s.voiceSupported,
@@ -83,7 +84,9 @@ export function AppModals({
           userExercises={slice.activeRoutine.exercises}
           spaces={slice.spaces}
           activeSpace={slice.activeSpace}
+          activeStyle={slice.preferredStyle}
           onSelectSpace={(spaceId) => store.selectSpace(spaceId)}
+          onSelectStyle={(style) => store.setPreferredStyle(style)}
           onManageSpaces={() =>
             onChangeModal({ kind: 'settings', tab: 'spaces', returnToNewWorkout: true })
           }

@@ -58,15 +58,28 @@ export function createVoiceCoach(initialEnabled = true): VoiceCoach {
       return enabled;
     },
     announceStep(step: TimelineStep) {
+      const isCalmStyle =
+        !step.exercise.styles.includes('strength') &&
+        (step.exercise.styles.includes('pilates') || step.exercise.styles.includes('mobility'));
+      const rate = isCalmStyle ? 0.94 : 1.04;
+
       if (step.phase === 'WORK') {
-        speak(`Work. ${step.exercise.name}.`);
+        speak(
+          isCalmStyle
+            ? `${step.exercise.name}. Inhale to prepare, exhale to engage.`
+            : `Work. ${step.exercise.name}.`,
+          rate,
+        );
       } else if (step.phase === 'REST') {
         const cleanName = step.exercise.name.replace(/^Rest & Prep:\s*/i, '');
-        speak(`Rest. Next up: ${cleanName}.`);
+        speak(
+          isCalmStyle ? `Transition. Next: ${cleanName}.` : `Rest. Next up: ${cleanName}.`,
+          rate,
+        );
       } else if (step.phase === 'WARM-UP') {
-        speak('Warm up. Arm circles and mobility.');
+        speak('Warm up. Arm circles and mobility.', rate);
       } else {
-        speak('Cool down. Upper body stretch.');
+        speak('Cool down. Breathe deeply and stretch.', 0.94);
       }
     },
     announceCountdown(sec: number) {

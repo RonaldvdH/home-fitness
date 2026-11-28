@@ -98,7 +98,7 @@ export function createBandRig(scene: Scene, tracker: ResourceTracker): BandRig {
   };
 
   return {
-    applyBand(prop, { vLHd, vRHd, vLAn, vRAn, vLTo, vRTo }) {
+    applyBand(prop, { vLHd, vRHd, vLKn, vRKn, vLAn, vRAn, vLTo, vRTo }) {
       for (const seg of segments) {
         seg.visible = false;
       }
@@ -173,21 +173,23 @@ export function createBandRig(scene: Scene, tracker: ResourceTracker): BandRig {
         return;
       }
 
-      // Closed double-strand mini-band loop around both ankles.
-      tmpDir.subVectors(vRAn, vLAn);
+      // Closed double-strand mini-band loop around both knees or ankles.
+      const anchorA = prop.mode === 'knees' ? vLKn : vLAn;
+      const anchorB = prop.mode === 'knees' ? vRKn : vRAn;
+      tmpDir.subVectors(anchorB, anchorA);
       tmpOff.set(-tmpDir.z, 0, tmpDir.x);
       if (tmpOff.lengthSq() < 1e-4) tmpOff.set(1, 0, 0);
       else tmpOff.normalize();
       tmpOff.multiplyScalar(0.022);
 
-      tmpE.copy(vLAn).add(tmpOff);
-      tmpF.copy(vRAn).add(tmpOff);
+      tmpE.copy(anchorA).add(tmpOff);
+      tmpF.copy(anchorB).add(tmpOff);
       tmpC.addVectors(tmpE, tmpF).multiplyScalar(0.5);
       tmpC.y += 0.025;
       applyCurve(0, 6, tmpE, tmpC, tmpF);
 
-      tmpG.copy(vLAn).sub(tmpOff);
-      tmpH.copy(vRAn).sub(tmpOff);
+      tmpG.copy(anchorA).sub(tmpOff);
+      tmpH.copy(anchorB).sub(tmpOff);
       tmpD.addVectors(tmpG, tmpH).multiplyScalar(0.5);
       tmpD.y += 0.025;
       applyCurve(6, 6, tmpG, tmpD, tmpH);

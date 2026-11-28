@@ -3,9 +3,12 @@ import {
   generateWorkoutPreset,
   TARGET_MUSCLE_GROUP_OPTIONS,
   WORKOUT_DURATIONS,
+  WORKOUT_STYLE_LABELS,
+  WORKOUT_STYLES,
   type GeneratedWorkoutPreset,
   type TargetMuscleGroup,
   type WorkoutDurationMin,
+  type WorkoutStyle,
 } from '../../domain/presets';
 import {
   EQUIPMENT_TAG_LABELS,
@@ -14,6 +17,7 @@ import {
   type WorkoutSpace,
 } from '../../domain/schema';
 import { formatMMSS } from '../../domain/timeline';
+import { SegmentedControl } from '../ui/segmented-control';
 import { ModalDialog } from './ModalDialog';
 
 export interface NewWorkoutModalProps {
@@ -22,7 +26,9 @@ export interface NewWorkoutModalProps {
   userExercises: readonly Exercise[];
   spaces: readonly WorkoutSpace[];
   activeSpace: WorkoutSpace;
+  activeStyle: WorkoutStyle;
   onSelectSpace: (spaceId: string) => void;
+  onSelectStyle: (style: WorkoutStyle) => void;
   onManageSpaces: () => void;
   onClose: () => void;
   onApply: (preset: GeneratedWorkoutPreset, autoStart: boolean) => void;
@@ -32,6 +38,12 @@ const DURATION_TAGLINES: Record<WorkoutDurationMin, string> = {
   10: 'Quick Express',
   15: 'Classic Circuit',
   20: 'Full Burn',
+};
+
+const STYLE_TAGLINES: Record<WorkoutStyle, string> = {
+  strength: 'HIIT intervals • energetic pace',
+  pilates: 'Controlled mat flow • 0.7× breath pace',
+  mobility: 'Unhurried stretches & rolling • 0.65× pace',
 };
 
 function formatSpaceSummary(space: WorkoutSpace): string {
@@ -49,17 +61,22 @@ export function NewWorkoutModal({
   userExercises,
   spaces,
   activeSpace,
+  activeStyle,
   onSelectSpace,
+  onSelectStyle,
   onManageSpaces,
   onClose,
   onApply,
 }: NewWorkoutModalProps) {
   const [durationMin, setDurationMin] = useState<WorkoutDurationMin>(15);
-  const [target, setTarget] = useState<TargetMuscleGroup>('upper');
+  const [target, setTarget] = useState<TargetMuscleGroup>(
+    activeStyle === 'strength' ? 'upper' : 'full',
+  );
   const [preview, setPreview] = useState<GeneratedWorkoutPreset>(() =>
     generateWorkoutPreset({
       durationMin: 15,
-      target: 'upper',
+      target: activeStyle === 'strength' ? 'upper' : 'full',
+      style: activeStyle,
       currentSettings,
       space: activeSpace,
       userExercises,
@@ -70,18 +87,20 @@ export function NewWorkoutModal({
     open,
     durationMin,
     target,
+    activeStyle,
     currentSettings,
     activeSpace,
     userExercises,
   });
 
-  // Re-build a fresh varied lineup whenever the overlay re-opens, Space changes, or filters change.
+  // Re-build a fresh varied lineup whenever the overlay re-opens, Style/Space changes, or filters change.
   useEffect(() => {
     const prev = lastSyncedRef.current;
     lastSyncedRef.current = {
       open,
       durationMin,
       target,
+      activeStyle,
       currentSettings,
       activeSpace,
       userExercises,
@@ -91,6 +110,7 @@ export function NewWorkoutModal({
       (prev.open === open &&
         prev.durationMin === durationMin &&
         prev.target === target &&
+        prev.activeStyle === activeStyle &&
         prev.currentSettings === currentSettings &&
         prev.activeSpace === activeSpace &&
         prev.userExercises === userExercises)
@@ -101,19 +121,21 @@ export function NewWorkoutModal({
       generateWorkoutPreset({
         durationMin,
         target,
+        style: activeStyle,
         currentSettings,
         space: activeSpace,
         userExercises,
         previousExerciseIds: prevPreview.exercises.map((e) => e.id),
       }),
     );
-  }, [open, durationMin, target, currentSettings, activeSpace, userExercises]);
+  }, [open, durationMin, target, activeStyle, currentSettings, activeSpace, userExercises]);
 
   const handleShuffle = (): void => {
     setPreview((prev) =>
       generateWorkoutPreset({
         durationMin,
         target,
+        style: activeStyle,
         currentSettings,
         space: activeSpace,
         userExercises,
@@ -140,6 +162,25 @@ export function NewWorkoutModal({
       onClose={onClose}
     >
       <div class="space-y-3.5">
+        {/* Workout Style Switcher (remembers last chosen style per device) */}
+        <div class="space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Workout Style</p>
+            <span class="text-[11px] text-slate-400 truncate">{STYLE_TAGLINES[activeStyle]}</span>
+          </div>
+          <SegmentedControl
+            value={activeStyle}
+            onChange={onSelectStyle}
+            ariaLabel="Workout Style"
+            size="sm"
+            className="w-full grid grid-cols-3"
+            options={WORKOUT_STYLES.map((style) => ({
+              value: style,
+              label: WORKOUT_STYLE_LABELS[style],
+              testId: `workout-style-${style}`,
+            }))}
+          />
+        </div>
         {/* Question 1: Workout Space */}
         <div>
           <div class="flex items-center justify-between gap-2 mb-1.5">

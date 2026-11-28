@@ -8,12 +8,14 @@ import { buildExercisePool } from './catalog';
 import {
   applySpaceToExercise,
   isExerciseEligibleForSpace,
+  WORKOUT_STYLE_LABELS,
   type Exercise,
   type MuscleGroupTag,
   type TargetMuscleGroup,
   type WorkoutDurationMin,
   type WorkoutSettings,
   type WorkoutSpace,
+  type WorkoutStyle,
 } from './schema';
 import { buildCircuitTimeline, computeTotalDuration } from './timeline';
 
@@ -113,9 +115,46 @@ function selectFullBodyExercises(
   return [...chosen, ...extras];
 }
 
+function computeStyleTiming(
+  style: WorkoutStyle,
+  durationMin: WorkoutDurationMin,
+  selectedCount: number,
+): Pick<WorkoutSettings, 'workSec' | 'restSec' | 'rounds'> & { demoSpeed?: number } {
+  if (style === 'pilates') {
+    if (durationMin === 10) return { workSec: 45, restSec: 15, rounds: 2, demoSpeed: 0.7 };
+    if (durationMin === 15) {
+      return selectedCount >= 5
+        ? { workSec: 45, restSec: 10, rounds: 3, demoSpeed: 0.7 }
+        : { workSec: 50, restSec: 15, rounds: 3, demoSpeed: 0.7 };
+    }
+    return selectedCount >= 6
+      ? { workSec: 45, restSec: 10, rounds: 3, demoSpeed: 0.7 }
+      : { workSec: 50, restSec: 10, rounds: 4, demoSpeed: 0.7 };
+  }
+
+  if (style === 'mobility') {
+    if (durationMin === 10) return { workSec: 45, restSec: 10, rounds: 2, demoSpeed: 0.65 };
+    if (durationMin === 15) return { workSec: 50, restSec: 10, rounds: 3, demoSpeed: 0.65 };
+    return { workSec: 60, restSec: 10, rounds: 3, demoSpeed: 0.65 };
+  }
+
+  if (durationMin === 10) return { workSec: 35, restSec: 20, rounds: 2 };
+  if (durationMin === 15) {
+    return selectedCount >= 5
+      ? { workSec: 35, restSec: 15, rounds: 3 }
+      : { workSec: 40, restSec: 20, rounds: 3 };
+  }
+  return selectedCount >= 6
+    ? { workSec: 40, restSec: 15, rounds: 3 }
+    : selectedCount === 5
+      ? { workSec: 35, restSec: 15, rounds: 4 }
+      : { workSec: 45, restSec: 20, rounds: 4 };
+}
+
 export interface GenerateWorkoutOptions {
   durationMin: WorkoutDurationMin;
   target: TargetMuscleGroup;
+  style?: WorkoutStyle;
   currentSettings: WorkoutSettings;
   space?: WorkoutSpace;
   userExercises?: readonly Exercise[];
@@ -127,6 +166,7 @@ export interface GeneratedWorkoutPreset {
   routineName: string;
   durationMin: WorkoutDurationMin;
   target: TargetMuscleGroup;
+  style: WorkoutStyle;
   spaceId?: string;
   spaceName?: string;
   exercises: Exercise[];
@@ -139,6 +179,7 @@ export function generateWorkoutPreset(options: GenerateWorkoutOptions): Generate
   const {
     durationMin,
     target,
+    style = 'strength',
     currentSettings,
     space,
     userExercises = [],
@@ -150,18 +191,15 @@ export function generateWorkoutPreset(options: GenerateWorkoutOptions): Generate
   const spacePool = space
     ? fullPool.filter((ex) => isExerciseEligibleForSpace(ex, space))
     : fullPool;
+  const stylePool = spacePool.filter((ex) => ex.styles.includes(style));
 
-  const durationTagged = spacePool.filter((ex) => ex.durations.includes(durationMin));
-  const durationPool = durationTagged.length >= 4 ? durationTagged : spacePool;
+  const durationTagged = stylePool.filter((ex) => ex.durations.includes(durationMin));
+  const durationPool = durationTagged.length >= 4 ? durationTagged : stylePool;
 
   const previousSet = new Set(previousExerciseIds);
   const targetMeta =
     TARGET_MUSCLE_GROUP_OPTIONS.find((opt) => opt.id === target) ?? TARGET_MUSCLE_GROUP_OPTIONS[0]!;
 
-  // Desired exercise counts & calibrated intervals (including 2 min warm-up + 1 min cool-down):
-  // - 10 min: 4 exercises x 2 rounds (35s/20s) = 10:00
-  // - 15 min: 4 exercises x 3 rounds (40s/20s) = 14:40 | full-body 5 exercises x 3 rounds (35s/15s) = 15:15
-  // - 20 min: 5 exercises x 4 rounds (35s/15s) = 19:25 | full-body 6 exercises x 3 rounds (40s/15s) = 19:15
   const desiredCount =
     target === 'full'
       ? durationMin === 10
@@ -184,7 +222,7 @@ export function generateWorkoutPreset(options: GenerateWorkoutOptions): Generate
     const fallbackPool =
       matchingPool.length > 0
         ? matchingPool
-        : spacePool.filter((ex) => ex.muscleGroups.includes(target));
+        : stylePool.filter((ex) => ex.muscleGroups.includes(target));
     rawSelected = pickWithVariation(fallbackPool, desiredCount, previousSet, random);
   }
 
@@ -192,22 +230,7 @@ export function generateWorkoutPreset(options: GenerateWorkoutOptions): Generate
     ? rawSelected.map((ex) => applySpaceToExercise(ex, space))
     : (structuredClone(rawSelected) as Exercise[]);
 
-  let timing: Pick<WorkoutSettings, 'workSec' | 'restSec' | 'rounds'>;
-  if (durationMin === 10) {
-    timing = { workSec: 35, restSec: 20, rounds: 2 };
-  } else if (durationMin === 15) {
-    timing =
-      selected.length >= 5
-        ? { workSec: 35, restSec: 15, rounds: 3 }
-        : { workSec: 40, restSec: 20, rounds: 3 };
-  } else {
-    timing =
-      selected.length >= 6
-        ? { workSec: 40, restSec: 15, rounds: 3 }
-        : selected.length === 5
-          ? { workSec: 35, restSec: 15, rounds: 4 }
-          : { workSec: 45, restSec: 20, rounds: 4 };
-  }
+  const timing = computeStyleTiming(style, durationMin, selected.length);
 
   const settings: WorkoutSettings = {
     ...currentSettings,
@@ -219,10 +242,16 @@ export function generateWorkoutPreset(options: GenerateWorkoutOptions): Generate
   const estimatedDurationSec =
     selected.length > 0 ? computeTotalDuration(buildCircuitTimeline(selected, settings)) : 0;
 
+  const routineName =
+    style === 'strength'
+      ? `${durationMin} min • ${targetMeta.label}`
+      : `${durationMin} min • ${WORKOUT_STYLE_LABELS[style]} • ${targetMeta.label}`;
+
   return {
-    routineName: `${durationMin} min • ${targetMeta.label}`,
+    routineName,
     durationMin,
     target,
+    style,
     ...(space ? { spaceId: space.id, spaceName: space.name } : {}),
     exercises: selected,
     settings,

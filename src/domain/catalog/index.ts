@@ -8,6 +8,7 @@ import type { Exercise } from '../schema';
 import { BAND_EXERCISES, WALL_EXERCISES } from './bandsAndWall';
 import { ABS_EXERCISES, EXTRA_UPPER_EXERCISES, LOWER_BODY_EXERCISES } from './dumbbells';
 import { BODYWEIGHT_FLOOR_EXERCISES, FOAM_ROLLER_EXERCISES } from './floorAndRoller';
+import { MOBILITY_EXERCISES, PILATES_EXERCISES } from './pilatesAndMobility';
 
 export function getExerciseCatalog(): Exercise[] {
   return [
@@ -19,6 +20,8 @@ export function getExerciseCatalog(): Exercise[] {
     ...(structuredClone(WALL_EXERCISES) as Exercise[]),
     ...(structuredClone(BODYWEIGHT_FLOOR_EXERCISES) as Exercise[]),
     ...(structuredClone(FOAM_ROLLER_EXERCISES) as Exercise[]),
+    ...(structuredClone(PILATES_EXERCISES) as Exercise[]),
+    ...(structuredClone(MOBILITY_EXERCISES) as Exercise[]),
   ];
 }
 
