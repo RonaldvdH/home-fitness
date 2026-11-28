@@ -60,7 +60,7 @@ export const BAND_EXERCISES: readonly Exercise[] = [
       kind: 'bands',
       label: 'Elastic Band • Standing',
     },
-    animationType: 'bicep-curl',
+    animationType: 'band-bicep-curl',
     active: true,
     steps: [
       'Stand evenly on the center of your elastic band and grip each side with palms turning upward as you curl.',

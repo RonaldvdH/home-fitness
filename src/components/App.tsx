@@ -8,6 +8,7 @@ import {
 } from '../services/foldable';
 import {
   createPwaUpdateController,
+  describeUpdateCheckResult,
   type PwaUpdateController,
   type PwaUpdateSnapshot,
 } from '../services/pwa';
@@ -366,6 +367,21 @@ export function App({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [store, foldable, anyModalOpen]);
 
+  const handleCheckForUpdate = () => {
+    if (pwaState.updateAvailable) {
+      void pwa.applyUpdate();
+      return;
+    }
+    void pwa.checkForUpdate().then((result) => {
+      const { message, tone } = describeUpdateCheckResult(result);
+      store.pushToast(message, tone);
+    });
+  };
+
+  const handleForceReload = () => {
+    void pwa.forceReload();
+  };
+
   return (
     <WorkoutStoreProvider store={store}>
       <PwaUpdateBridge pwa={pwa} pwaState={pwaState} />
@@ -401,7 +417,13 @@ export function App({
         </>
       )}
 
-      <AppModals modal={modal} onChangeModal={setModal} />
+      <AppModals
+        modal={modal}
+        onChangeModal={setModal}
+        updateAvailable={pwaState.updateAvailable}
+        onCheckForUpdate={handleCheckForUpdate}
+        onForceReload={handleForceReload}
+      />
 
       <ConnectedToastHost />
     </WorkoutStoreProvider>

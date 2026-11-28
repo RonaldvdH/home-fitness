@@ -53,6 +53,7 @@ const ROLLER_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
 const BAND_ANIMATIONS: ReadonlySet<AnimationId> = new Set<AnimationId>([
   'band-pull-apart',
   'band-row',
+  'band-bicep-curl',
   'band-kickback',
 ]);
 
@@ -207,6 +208,7 @@ export function inferMuscleGroupTags(
     animationType === 'tricep-extension' ||
     animationType === 'band-pull-apart' ||
     animationType === 'band-row' ||
+    animationType === 'band-bicep-curl' ||
     animationType === 'wall-pushup' ||
     animationType === 'wall-angels' ||
     animationType === 'push-up' ||

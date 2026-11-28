@@ -31,9 +31,18 @@ export type ActiveModal =
 export interface AppModalsProps {
   modal: ActiveModal;
   onChangeModal: (next: ActiveModal) => void;
+  updateAvailable: boolean;
+  onCheckForUpdate: () => void;
+  onForceReload: () => void;
 }
 
-export function AppModals({ modal, onChangeModal }: AppModalsProps) {
+export function AppModals({
+  modal,
+  onChangeModal,
+  updateAvailable,
+  onCheckForUpdate,
+  onForceReload,
+}: AppModalsProps) {
   const store = useWorkoutStore();
   const slice = useStoreSelector(
     (s) => ({
@@ -129,6 +138,9 @@ export function AppModals({ modal, onChangeModal }: AppModalsProps) {
           onExportJson={handleExportJson}
           onImportFile={handleImportFile}
           onRestoreDefaults={() => store.restoreDefaultExercises()}
+          updateAvailable={updateAvailable}
+          onCheckForUpdate={onCheckForUpdate}
+          onForceReload={onForceReload}
         />
       )}
 

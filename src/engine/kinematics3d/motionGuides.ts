@@ -38,6 +38,7 @@ const MOTION_GUIDE_JOINTS: Record<AnimationId, readonly MotionGuideJoint[]> = {
   superman: ['rightHand', 'rightAnkle'],
   'band-pull-apart': ['leftHand', 'rightHand'],
   'band-row': ['leftHand', 'rightHand'],
+  'band-bicep-curl': ['leftHand', 'rightHand'],
   'band-kickback': ['rightAnkle'],
   'wall-sit': [],
   'wall-pushup': ['chest'],

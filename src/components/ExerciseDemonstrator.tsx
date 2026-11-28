@@ -183,7 +183,7 @@ export function ExerciseDemonstrator({
         <ol
           data-testid="live-rep-cue"
           aria-label="Repetition tempo cues"
-          class="mt-2 pt-2 border-t border-slate-800/70 grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full shrink-0"
+          class="mt-2 pt-2 border-t border-slate-800/70 grid grid-cols-2 gap-1.5 w-full shrink-0"
         >
           {phaseCues.map((cueText, idx) => (
             <li
@@ -192,13 +192,13 @@ export function ExerciseDemonstrator({
                 cueItemRefs.current[idx] = el;
               }}
               data-active={idx === 0 ? 'true' : 'false'}
-              class="group min-w-0 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[11px] font-medium text-slate-400 transition-colors duration-300 data-[active=true]:bg-emerald-500/10 data-[active=true]:border-emerald-500/30 data-[active=true]:text-emerald-200"
+              class="group min-w-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-950/50 border border-slate-800/70 text-[11px] leading-tight font-medium text-slate-400 transition-colors duration-300 data-[active=true]:bg-emerald-500/10 data-[active=true]:border-emerald-500/30 data-[active=true]:text-emerald-200"
             >
               <span
                 class="w-1.5 h-1.5 rounded-full bg-slate-600 group-data-[active=true]:bg-emerald-400 transition-colors duration-300 shrink-0"
                 aria-hidden="true"
               />
-              <span class="truncate">{cueText}</span>
+              <span class="min-w-0 break-words">{cueText}</span>
             </li>
           ))}
         </ol>

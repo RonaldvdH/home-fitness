@@ -178,14 +178,7 @@ export function createStage3DController(options: Stage3DControllerOptions): Stag
   const unitJointGeo = trackGeo(new SphereGeometry(1, 18, 14));
 
   const mannequin = createMannequinRig(scene, tracker, unitCylinderGeo, unitJointGeo, highlights);
-  const propsRig = createPropsRig(
-    scene,
-    tracker,
-    unitCylinderGeo,
-    matTrimMat,
-    weightLabel,
-    animationType,
-  );
+  const propsRig = createPropsRig(scene, tracker, matTrimMat, weightLabel, animationType);
   const orbit = createOrbitController(canvas, camera, options.onOrbitChange);
 
   const handleContextLost = (event: Event): void => {

@@ -30,6 +30,8 @@ export interface MannequinVectors {
   vRHd: Vector3;
   vLAn: Vector3;
   vRAn: Vector3;
+  vLTo: Vector3;
+  vRTo: Vector3;
 }
 
 export interface MannequinRig {
@@ -261,7 +263,7 @@ export function createMannequinRig(
 
   return {
     syncHighlights,
-    vectors: { vLHd, vRHd, vLAn, vRAn },
+    vectors: { vLHd, vRHd, vLAn, vRAn, vLTo, vRTo },
     applyPose(pose, highlights, progress) {
       pulseRegionEmissive(highlights, progress);
 

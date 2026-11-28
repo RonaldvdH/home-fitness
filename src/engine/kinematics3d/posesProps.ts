@@ -59,6 +59,38 @@ export const PROPS_3D_ANIMATIONS: Partial<Record<AnimationId, Animation3DDefinit
     },
   },
 
+  'band-bicep-curl': {
+    id: 'band-bicep-curl',
+    cameraPreset: 'three-quarter',
+    computePose: (p) => {
+      const curlTheta = lerp(0.12, 2.34, p);
+      const elbowY = 1.01;
+      const elbowZ = lerp(0.01, 0.08, p);
+      const forearmLen = RIG_DIMENSIONS.forearm;
+
+      const lHand = v3(
+        lerp(0.24, 0.21, p),
+        elbowY - Math.cos(curlTheta) * forearmLen,
+        elbowZ + Math.sin(curlTheta) * forearmLen,
+      );
+      const rHand = v3(
+        lerp(-0.24, -0.21, p),
+        elbowY - Math.cos(curlTheta) * forearmLen,
+        elbowZ + Math.sin(curlTheta) * forearmLen,
+      );
+
+      return buildStandingFrontPose({
+        stanceHalfW: 0.2,
+        leftHand: lHand,
+        rightHand: rHand,
+        leftPole: v3(0.25, -0.65, -0.7),
+        rightPole: v3(-0.25, -0.65, -0.7),
+        cameraPreset: 'three-quarter',
+        prop: { kind: 'band', mode: 'feet-to-hands' },
+      });
+    },
+  },
+
   'band-kickback': {
     id: 'band-kickback',
     cameraPreset: 'floor-three-quarter',

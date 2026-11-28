@@ -25,6 +25,9 @@ export interface SettingsModalProps {
   onExportJson: () => void;
   onImportFile: (file: File) => void;
   onRestoreDefaults: () => void;
+  updateAvailable?: boolean;
+  onCheckForUpdate?: () => void;
+  onForceReload?: () => void;
 }
 
 export function SettingsModal({
@@ -44,6 +47,9 @@ export function SettingsModal({
   onExportJson,
   onImportFile,
   onRestoreDefaults,
+  updateAvailable = false,
+  onCheckForUpdate,
+  onForceReload,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [workSec, setWorkSec] = useState(settings.workSec);
@@ -354,11 +360,33 @@ export function SettingsModal({
               </button>
             </section>
 
-            <section class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2 text-xs">
-              <span class="text-slate-400">Installed Offline App Version</span>
-              <span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 font-mono font-semibold text-emerald-300">
-                {import.meta.env.VITE_APP_VERSION ?? 'dev'}
-              </span>
+            <section class="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-slate-300 font-semibold">Installed Offline App Version</span>
+                <span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 font-mono font-semibold text-emerald-300">
+                  {import.meta.env.VITE_APP_VERSION ?? 'dev'}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                Check for a newer release or force-refresh the offline app cache without erasing
+                your saved routines, Spaces, or history.
+              </p>
+              <div class="grid grid-cols-2 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={onCheckForUpdate}
+                  class="px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-xs font-semibold text-emerald-300 transition"
+                >
+                  {updateAvailable ? 'Install Update' : 'Check for Update'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onForceReload}
+                  class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                >
+                  Force Reload App
+                </button>
+              </div>
             </section>
 
             <div class="flex justify-end pt-2 border-t border-slate-800">
