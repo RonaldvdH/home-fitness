@@ -10,6 +10,22 @@ export interface PwaUpdateSnapshot {
 
 export type UpdateCheckResult = 'update-found' | 'up-to-date' | 'unsupported';
 
+export function describeUpdateCheckResult(result: UpdateCheckResult): {
+  message: string;
+  tone: 'success' | 'info';
+} {
+  if (result === 'update-found') {
+    return { message: 'Update found! Tap Refresh to install.', tone: 'success' };
+  }
+  if (result === 'up-to-date') {
+    return { message: 'You are already on the latest version.', tone: 'info' };
+  }
+  return {
+    message: 'Update check unavailable — use Force Reload App to refresh.',
+    tone: 'info',
+  };
+}
+
 export interface PwaUpdateController {
   getSnapshot: () => PwaUpdateSnapshot;
   subscribe: (listener: () => void) => () => void;
